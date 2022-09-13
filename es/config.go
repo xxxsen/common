@@ -2,6 +2,13 @@ package es
 
 import "time"
 
+type EsConfig struct {
+	User     string   `json:"user"`
+	Password string   `json:"password"`
+	Timeout  int      `json:"timeout"`
+	Host     []string `json:"host"`
+}
+
 type config struct {
 	user, password string
 	urls           []string

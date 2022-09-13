@@ -1,5 +1,13 @@
 package s3
 
+type S3Config struct {
+	Endpoint  string `json:"endpoint"`
+	SecretId  string `json:"secret_id"`
+	SecretKey string `json:"secret_key"`
+	UseSSL    bool   `json:"use_ssl"`
+	Bucket    string `json:"bucket"`
+}
+
 type config struct {
 	secretId  string
 	secretKey string
