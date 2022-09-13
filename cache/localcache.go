@@ -11,7 +11,7 @@ type LocalCache struct {
 	c *lru.Cache
 }
 
-func New(size int) (*LocalCache, error) {
+func NewLocalCache(size int) (*LocalCache, error) {
 	if size <= 0 {
 		size = 10000
 	}
