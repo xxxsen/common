@@ -62,11 +62,12 @@ func (e *Error) WithDebugMsg(fmtter string, args ...interface{}) *Error {
 	return e
 }
 
-func IsErrOK(err IError) bool {
-	if err == nil {
+func IsErrOK(err error) bool {
+	ierr := FromError(err)
+	if ierr == nil {
 		return true
 	}
-	if err.Code() == 0 {
+	if ierr.Code() == 0 {
 		return true
 	}
 	return false
