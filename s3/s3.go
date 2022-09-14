@@ -16,9 +16,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
-var Client *s3Client
+var Client *S3Client
 
-type s3Client struct {
+type S3Client struct {
 	c      *config
 	sess   *session.Session
 	client *s3.S3
@@ -42,7 +42,7 @@ func InitGlobal(opts ...Option) error {
 	return nil
 }
 
-func New(opts ...Option) (*s3Client, error) {
+func New(opts ...Option) (*S3Client, error) {
 	c := &config{
 		ssl: true,
 	}
@@ -65,10 +65,10 @@ func New(opts ...Option) (*s3Client, error) {
 		return nil, errs.Wrap(errs.ErrS3, "init session fail", err)
 	}
 	client := s3.New(sess)
-	return &s3Client{c: c, client: client, sess: sess}, nil
+	return &S3Client{c: c, client: client, sess: sess}, nil
 }
 
-func (c *s3Client) Download(ctx context.Context, fileid string) (io.ReadCloser, error) {
+func (c *S3Client) Download(ctx context.Context, fileid string) (io.ReadCloser, error) {
 	output, err := c.client.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(c.c.bucket),
 		Key:    aws.String(fileid),
@@ -79,7 +79,7 @@ func (c *s3Client) Download(ctx context.Context, fileid string) (io.ReadCloser, 
 	return output.Body, nil
 }
 
-func (c *s3Client) Upload(ctx context.Context, fileid string, r io.ReadSeeker, sz int64, cks ...string) error {
+func (c *S3Client) Upload(ctx context.Context, fileid string, r io.ReadSeeker, sz int64, cks ...string) error {
 	input := &s3.PutObjectInput{
 		Body:   r,
 		Bucket: aws.String(c.c.bucket),
@@ -95,7 +95,7 @@ func (c *s3Client) Upload(ctx context.Context, fileid string, r io.ReadSeeker, s
 	return nil
 }
 
-func (c *s3Client) Remove(ctx context.Context, fileid string) error {
+func (c *S3Client) Remove(ctx context.Context, fileid string) error {
 	_, err := c.client.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(c.c.bucket),
 		Key:    aws.String(fileid),
@@ -106,7 +106,7 @@ func (c *s3Client) Remove(ctx context.Context, fileid string) error {
 	return nil
 }
 
-func (c *s3Client) BeginUpload(ctx context.Context, fileid string) (string, error) {
+func (c *S3Client) BeginUpload(ctx context.Context, fileid string) (string, error) {
 	output, err := c.client.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
 		Bucket: aws.String(c.c.bucket),
 		Key:    aws.String(fileid),
@@ -117,7 +117,7 @@ func (c *s3Client) BeginUpload(ctx context.Context, fileid string) (string, erro
 	return *output.UploadId, nil
 }
 
-func (c *s3Client) UploadPart(ctx context.Context, fileid string, uploadid string, partid int, file io.ReadSeeker, cks ...string) error {
+func (c *S3Client) UploadPart(ctx context.Context, fileid string, uploadid string, partid int, file io.ReadSeeker, cks ...string) error {
 	input := &s3.UploadPartInput{
 		Body:       file,
 		Bucket:     aws.String(c.c.bucket),
@@ -135,7 +135,7 @@ func (c *s3Client) UploadPart(ctx context.Context, fileid string, uploadid strin
 	return nil
 }
 
-func (c *s3Client) listParts(ctx context.Context, fileid string, uploadid string) ([]*s3.Part, error) {
+func (c *S3Client) listParts(ctx context.Context, fileid string, uploadid string) ([]*s3.Part, error) {
 	output, err := c.client.ListParts(&s3.ListPartsInput{
 		Bucket:              aws.String(c.c.bucket),
 		ExpectedBucketOwner: new(string),
@@ -148,7 +148,7 @@ func (c *s3Client) listParts(ctx context.Context, fileid string, uploadid string
 	return output.Parts, nil
 }
 
-func (c *s3Client) parts2completeparts(src []*s3.Part) []*s3.CompletedPart {
+func (c *S3Client) parts2completeparts(src []*s3.Part) []*s3.CompletedPart {
 	out := make([]*s3.CompletedPart, 0, len(src))
 	for _, p := range src {
 		out = append(out, &s3.CompletedPart{
@@ -163,7 +163,7 @@ func (c *s3Client) parts2completeparts(src []*s3.Part) []*s3.CompletedPart {
 	return out
 }
 
-func (c *s3Client) EndUpload(ctx context.Context, fileid string, uploadid string, partcount int) error {
+func (c *S3Client) EndUpload(ctx context.Context, fileid string, uploadid string, partcount int) error {
 	parts, err := c.listParts(ctx, fileid, uploadid)
 	if err != nil {
 		return err
@@ -185,7 +185,7 @@ func (c *s3Client) EndUpload(ctx context.Context, fileid string, uploadid string
 	return nil
 }
 
-func (c *s3Client) DiscardMultiPartUpload(ctx context.Context, fileid string, uploadid string) error {
+func (c *S3Client) DiscardMultiPartUpload(ctx context.Context, fileid string, uploadid string) error {
 	_, err := c.client.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
 		Bucket:   aws.String(c.c.bucket),
 		Key:      aws.String(fileid),
@@ -201,7 +201,7 @@ type ObjectMetaInfo struct {
 	ETag *string
 }
 
-func (c *s3Client) GetFileInfo(ctx context.Context, fileid string) (*ObjectMetaInfo, error) {
+func (c *S3Client) GetFileInfo(ctx context.Context, fileid string) (*ObjectMetaInfo, error) {
 	out, err := c.client.HeadObject(&s3.HeadObjectInput{
 		Bucket: aws.String(c.c.bucket),
 		Key:    aws.String(fileid),
