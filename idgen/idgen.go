@@ -7,6 +7,10 @@ import (
 
 var defaultGenner IDGenerator
 
+func Default() IDGenerator {
+	return defaultGenner
+}
+
 func Init(wrkid uint16) error {
 	defaultGenner = New(wrkid)
 	return nil

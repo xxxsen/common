@@ -17,6 +17,14 @@ func GetAttach(ctx context.Context) map[string]interface{} {
 	return iVal.(map[string]interface{})
 }
 
+func GetAttachKey(ctx context.Context, key string) (interface{}, bool) {
+	m := GetAttach(ctx)
+	if v, ok := m[key]; ok {
+		return v, true
+	}
+	return nil, false
+}
+
 func GetServer(ctx context.Context) (*Server, bool) {
 	v := ctx.Value(constants.KeyServer)
 	if v == nil {

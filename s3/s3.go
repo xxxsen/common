@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -68,12 +69,15 @@ func New(opts ...Option) (*S3Client, error) {
 	return &S3Client{c: c, client: client, sess: sess}, nil
 }
 
-func (c *S3Client) DownloadByRange(ctx context.Context, fileid string, ranges *string) (io.ReadCloser, error) {
-	output, err := c.client.GetObject(&s3.GetObjectInput{
+func (c *S3Client) DownloadByRange(ctx context.Context, fileid string, at int64) (io.ReadCloser, error) {
+	input := &s3.GetObjectInput{
 		Bucket: aws.String(c.c.bucket),
 		Key:    aws.String(fileid),
-		Range:  ranges,
-	})
+	}
+	if at != 0 {
+		input.Range = aws.String(fmt.Sprintf("%d-", at))
+	}
+	output, err := c.client.GetObject(input)
 	if err != nil {
 		return nil, errs.Wrap(errs.ErrS3, "get obj fail", err)
 	}
@@ -81,7 +85,7 @@ func (c *S3Client) DownloadByRange(ctx context.Context, fileid string, ranges *s
 }
 
 func (c *S3Client) Download(ctx context.Context, fileid string) (io.ReadCloser, error) {
-	return c.DownloadByRange(ctx, fileid, nil)
+	return c.DownloadByRange(ctx, fileid, 0)
 }
 
 func (c *S3Client) Upload(ctx context.Context, fileid string, r io.ReadSeeker, sz int64, cks ...string) error {
