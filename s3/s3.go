@@ -94,7 +94,7 @@ func (c *S3Client) Upload(ctx context.Context, fileid string, r io.ReadSeeker, s
 		Bucket: aws.String(c.c.bucket),
 		Key:    aws.String(fileid),
 	}
-	if len(cks) > 0 {
+	if len(cks) > 0 && len(cks[0]) > 0 {
 		input.ContentMD5 = toBase64MD5CheckSum(cks[0])
 	}
 	_, err := c.client.PutObject(input)
