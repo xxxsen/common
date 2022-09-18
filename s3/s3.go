@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/xxxsen/common/errs"
 
@@ -88,7 +89,7 @@ func (c *S3Client) Download(ctx context.Context, fileid string) (io.ReadCloser, 
 	return c.DownloadByRange(ctx, fileid, 0)
 }
 
-func (c *S3Client) Upload(ctx context.Context, fileid string, r io.ReadSeeker, sz int64, cks ...string) error {
+func (c *S3Client) Upload(ctx context.Context, fileid string, r io.ReadSeeker, sz int64, cks ...string) (string, error) {
 	input := &s3.PutObjectInput{
 		Body:   r,
 		Bucket: aws.String(c.c.bucket),
@@ -97,11 +98,11 @@ func (c *S3Client) Upload(ctx context.Context, fileid string, r io.ReadSeeker, s
 	if len(cks) > 0 && len(cks[0]) > 0 {
 		input.ContentMD5 = toBase64MD5CheckSum(cks[0])
 	}
-	_, err := c.client.PutObject(input)
+	rsp, err := c.client.PutObject(input)
 	if err != nil {
-		return errs.Wrap(errs.ErrS3, "write obj fail", err)
+		return "", errs.Wrap(errs.ErrS3, "write obj fail", err)
 	}
-	return nil
+	return c.unquote(*rsp.ETag), nil
 }
 
 func (c *S3Client) Remove(ctx context.Context, fileid string) error {
@@ -172,15 +173,15 @@ func (c *S3Client) parts2completeparts(src []*s3.Part) []*s3.CompletedPart {
 	return out
 }
 
-func (c *S3Client) EndUpload(ctx context.Context, fileid string, uploadid string, partcount int) error {
+func (c *S3Client) EndUpload(ctx context.Context, fileid string, uploadid string, partcount int) (string, error) {
 	parts, err := c.listParts(ctx, fileid, uploadid)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if len(parts) != partcount {
-		return errs.New(errs.ErrParam, "part count not match, need:%d, get:%d", partcount, len(parts))
+		return "", errs.New(errs.ErrParam, "part count not match, need:%d, get:%d", partcount, len(parts))
 	}
-	_, err = c.client.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
+	rsp, err := c.client.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
 		Bucket: aws.String(c.c.bucket),
 		Key:    aws.String(fileid),
 		MultipartUpload: &s3.CompletedMultipartUpload{
@@ -189,9 +190,9 @@ func (c *S3Client) EndUpload(ctx context.Context, fileid string, uploadid string
 		UploadId: aws.String(uploadid),
 	})
 	if err != nil {
-		return errs.Wrap(errs.ErrS3, "finish upload fail", err)
+		return "", errs.Wrap(errs.ErrS3, "finish upload fail", err)
 	}
-	return nil
+	return c.unquote(*rsp.ETag), nil
 }
 
 func (c *S3Client) DiscardMultiPartUpload(ctx context.Context, fileid string, uploadid string) error {
@@ -219,6 +220,10 @@ func (c *S3Client) GetFileInfo(ctx context.Context, fileid string) (*ObjectMetaI
 		return nil, errs.Wrap(errs.ErrS3, "get obj info from s3 fail", err)
 	}
 	return &ObjectMetaInfo{
-		ETag: out.ETag,
+		ETag: aws.String(c.unquote(*out.ETag)),
 	}, nil
+}
+
+func (c *S3Client) unquote(etag string) string {
+	return strings.Trim(etag, "\"")
 }
