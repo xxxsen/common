@@ -57,11 +57,12 @@ func New(opts ...Option) (*S3Client, error) {
 
 	credit := credentials.NewStaticCredentials(c.secretId, c.secretKey, "")
 	sess, err := session.NewSession(&aws.Config{
-		Credentials: credit,
-		Endpoint:    aws.String(c.endpoint),
-		DisableSSL:  aws.Bool(!c.ssl),
-		HTTPClient:  &http.Client{},
-		Region:      aws.String("cn"),
+		Credentials:      credit,
+		Endpoint:         aws.String(c.endpoint),
+		DisableSSL:       aws.Bool(!c.ssl),
+		HTTPClient:       &http.Client{},
+		Region:           aws.String("cn"),
+		S3ForcePathStyle: aws.Bool(true),
 	})
 	if err != nil {
 		return nil, errs.Wrap(errs.ErrS3, "init session fail", err)
