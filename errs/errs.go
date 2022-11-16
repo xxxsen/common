@@ -23,7 +23,7 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	buf := bytes.NewBufferString(fmt.Sprintf("Error:[code:%d, msg:%s", e.code, e.msg))
+	buf := bytes.NewBufferString(fmt.Sprintf("Error:[code:%d, msg:%s]", e.code, e.msg))
 	if e.err != nil {
 		buf.WriteString(fmt.Sprintf(", err:[%v]", e.err))
 	}
