@@ -38,6 +38,6 @@ func EnableServerTraceMiddleware(svr *Server) gin.HandlerFunc {
 			requestid = uuid.NewString()
 		}
 		ctx.Writer.Header().Set("x-request-id", requestid)
-		trace.SetTraceID(ctx, requestid)
+		trace.SetTraceId(ctx, requestid)
 	}
 }
