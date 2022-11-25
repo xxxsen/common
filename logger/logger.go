@@ -34,12 +34,12 @@ func Init(file string, lv string, maxRotate int, maxSize int, maxKeepDays int, w
 		MessageKey:   "msg",
 		LevelKey:     "level",
 		TimeKey:      "time",
-		NameKey:      "logger",
 		CallerKey:    "caller",
 		FunctionKey:  "func",
 		EncodeTime:   zapcore.ISO8601TimeEncoder,
 		EncodeCaller: zapcore.ShortCallerEncoder,
 		EncodeName:   zapcore.FullNameEncoder,
+		EncodeLevel:  zapcore.LowercaseLevelEncoder,
 	})
 	synclist := make([]zapcore.WriteSyncer, 0, 2)
 	if len(file) != 0 && maxSize > 0 {
