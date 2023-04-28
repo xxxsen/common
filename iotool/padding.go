@@ -92,9 +92,9 @@ func (p *Padding) circleWrite(b []byte) error {
 		return errs.New(errs.ErrParam, "write empty data")
 	}
 	//2字节长度+2字节填充长度+n字节填充+m字节数据流
-	var rnd string
+	var rnd []byte
 	if len(b) < int(p.paddingSizeIfLessThan) {
-		rnd = utils.RandString(int(p.min), int(p.max))
+		rnd = utils.RandBytes(int(p.min), int(p.max))
 	}
 	if err := p.writeUint16(p.bioRw, uint16(len(b))); err != nil {
 		return errs.Wrap(errs.ErrIO, "write total length fail", err)
@@ -103,7 +103,7 @@ func (p *Padding) circleWrite(b []byte) error {
 		return errs.Wrap(errs.ErrIO, "write padding length fail", err)
 	}
 	if len(rnd) != 0 {
-		if _, err := p.bioRw.Write([]byte(rnd)); err != nil {
+		if _, err := p.bioRw.Write(rnd); err != nil {
 			return errs.Wrap(errs.ErrIO, "write padding fail", err)
 		}
 	}
