@@ -46,7 +46,8 @@ func InitGlobal(opts ...Option) error {
 
 func New(opts ...Option) (*S3Client, error) {
 	c := &config{
-		ssl: true,
+		ssl:    true,
+		region: "cn",
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -61,7 +62,7 @@ func New(opts ...Option) (*S3Client, error) {
 		Endpoint:         aws.String(c.endpoint),
 		DisableSSL:       aws.Bool(!c.ssl),
 		HTTPClient:       &http.Client{},
-		Region:           aws.String("cn"),
+		Region:           aws.String(c.region),
 		S3ForcePathStyle: aws.Bool(true),
 	})
 	if err != nil {

@@ -6,6 +6,7 @@ type S3Config struct {
 	SecretKey string `json:"secret_key"`
 	UseSSL    bool   `json:"use_ssl"`
 	Bucket    string `json:"bucket"`
+	Region    string `json:"region"`
 }
 
 type config struct {
@@ -14,6 +15,7 @@ type config struct {
 	ssl       bool
 	endpoint  string
 	bucket    string
+	region    string
 }
 
 type Option func(c *config)
@@ -40,5 +42,11 @@ func WithEndpoint(ep string) Option {
 func WithBucket(bk string) Option {
 	return func(c *config) {
 		c.bucket = bk
+	}
+}
+
+func WithRegion(rg string) Option {
+	return func(c *config) {
+		c.region = rg
 	}
 }
