@@ -3,6 +3,7 @@ package logger
 import (
 	"os"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -30,16 +31,30 @@ func stringToLevel(lv string) zapcore.Level {
 }
 
 func Init(file string, lv string, maxRotate int, maxSize int, maxKeepDays int, withConsole bool) *zap.Logger {
-	encoder := zapcore.NewJSONEncoder(zapcore.EncoderConfig{
-		MessageKey:   "msg",
-		LevelKey:     "level",
-		TimeKey:      "time",
-		CallerKey:    "caller",
-		FunctionKey:  "func",
-		EncodeTime:   zapcore.ISO8601TimeEncoder,
-		EncodeCaller: zapcore.ShortCallerEncoder,
-		EncodeName:   zapcore.FullNameEncoder,
-		EncodeLevel:  zapcore.LowercaseLevelEncoder,
+	levelEncoder := func(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+		enc.AppendString(level.CapitalString())
+	}
+	timeEncoder := func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+		enc.AppendString(t.Format("2006-01-02 15:04:05.000"))
+	}
+	callerEncoder := func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
+		enc.AppendString(caller.TrimmedPath())
+	}
+	nameEncoder := func(loggerName string, enc zapcore.PrimitiveArrayEncoder) {
+		enc.AppendString(loggerName)
+	}
+	encoder := zapcore.NewConsoleEncoder(zapcore.EncoderConfig{
+		MessageKey:       "msg",
+		LevelKey:         "level",
+		TimeKey:          "time",
+		CallerKey:        "caller",
+		LineEnding:       zapcore.DefaultLineEnding,
+		EncodeTime:       timeEncoder,
+		EncodeCaller:     callerEncoder,
+		EncodeName:       nameEncoder,
+		EncodeLevel:      levelEncoder,
+		EncodeDuration:   zapcore.MillisDurationEncoder,
+		ConsoleSeparator: "|",
 	})
 	synclist := make([]zapcore.WriteSyncer, 0, 2)
 	if len(file) != 0 && maxSize > 0 {
