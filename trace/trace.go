@@ -7,17 +7,22 @@ import (
 	"github.com/xxxsen/common/naivesvr/constants"
 )
 
+type traceIdType struct{}
+
+var (
+	keyTraceId = traceIdType{}
+)
+
 func SetTraceId(ctx *gin.Context, traceid string) {
 	ctx.Set(constants.KeyTraceID, traceid)
 }
 
 func WithTraceId(ctx context.Context, traceid string) context.Context {
-	//lint:ignore SA1029 ignore it
-	return context.WithValue(ctx, constants.KeyTraceID, traceid)
+	return context.WithValue(ctx, keyTraceId, traceid)
 }
 
 func GetTraceId(ctx context.Context) (string, bool) {
-	v := ctx.Value(constants.KeyTraceID)
+	v := ctx.Value(keyTraceId)
 	if v == nil {
 		return "", false
 	}
