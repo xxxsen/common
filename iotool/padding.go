@@ -119,7 +119,7 @@ func (p *Padding) circleWrite(b []byte) error {
 func (p *Padding) Write(b []byte) (int, error) {
 	for i := 0; i < len(b); i += int(p.maxBusiDataLength) {
 		l := i
-		r := (i + 1) * int(p.maxBusiDataLength)
+		r := i + int(p.maxBusiDataLength)
 		if r > len(b) {
 			r = len(b)
 		}
