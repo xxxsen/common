@@ -11,7 +11,7 @@ import (
 func GetLogger(ctx context.Context) *zap.Logger {
 	l := logger.Logger()
 	traceid, exist := trace.GetTraceId(ctx)
-	if !exist {
+	if !exist || len(traceid) == 0 {
 		return l
 	}
 	return l.With(zap.String("traceid", traceid))

@@ -1,19 +1,18 @@
-package naivesvr
+package cgi
 
 import (
-	"github.com/xxxsen/common/errs"
-	"github.com/xxxsen/common/naivesvr/codec"
+	"github.com/xxxsen/common/cgi/codec"
 
 	"github.com/gin-gonic/gin"
 )
 
-type ProcessFunc func(c *gin.Context, req interface{}) (int, errs.IError, interface{})
+type ProcessFunc func(c *gin.Context, req interface{}) (int, interface{}, error)
 type RequestCreatorFunc func() interface{}
 
 type IHandler interface {
 	Request() interface{}
 	Codec() codec.ICodec
-	Process(c *gin.Context, req interface{}) (int, errs.IError, interface{})
+	Process(c *gin.Context, req interface{}) (int, interface{}, error)
 }
 
 type HandlerRegisterFunc func(engine *gin.Engine)
@@ -40,6 +39,6 @@ func (c *DefaultHandler) Codec() codec.ICodec {
 	return c.codec
 }
 
-func (c *DefaultHandler) Process(ctx *gin.Context, req interface{}) (int, errs.IError, interface{}) {
+func (c *DefaultHandler) Process(ctx *gin.Context, req interface{}) (int, interface{}, error) {
 	return c.pfunc(ctx, req)
 }

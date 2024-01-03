@@ -1,27 +1,42 @@
-package naivesvr
+package cgi
 
 import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/xxxsen/common/logger"
 )
 
-var defaultLogger = logger.Logger()
+var defaultServer *Server
+
+func Init(opts ...Option) error {
+	svc, err := NewServer(opts...)
+	if err != nil {
+		return err
+	}
+	defaultServer = svc
+	return nil
+}
+
+func MustInit(opts ...Option) {
+	if err := Init(opts...); err != nil {
+		panic(err)
+	}
+}
+
+func Run() error {
+	return defaultServer.Run()
+}
 
 type Server struct {
-	c *Config
+	c *config
 }
 
 func NewServer(opts ...Option) (*Server, error) {
-	c := &Config{
+	c := &config{
 		attach: make(map[string]interface{}),
 	}
 	for _, opt := range opts {
 		opt(c)
-	}
-	if c.l == nil {
-		c.l = defaultLogger
 	}
 	s := &Server{c: c}
 	if err := s.initServer(); err != nil {
@@ -51,8 +66,7 @@ func (s *Server) Run() error {
 func (s *Server) registDefault(engine *gin.Engine) {
 	engine.Use(
 		PanicRecoverMiddleware(s),
-		SupportAttachMiddleware(s),
 		EnableServerTraceMiddleware(s),
-		SupportServerGetterMiddleware(s),
+		EnableAttachMiddleware(s),
 	)
 }
