@@ -31,6 +31,10 @@ func stringToLevel(lv string) zapcore.Level {
 }
 
 func Init(file string, lv string, maxRotate int, maxSize int, maxKeepDays int, withConsole bool) *zap.Logger {
+	if len(lv) == 0 {
+		lv = "debug"
+		withConsole = true
+	}
 	levelEncoder := func(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendString(level.CapitalString())
 	}
