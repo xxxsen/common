@@ -1,17 +1,29 @@
 package iotool
 
 import (
+	"fmt"
 	"io"
 	"net"
+	"time"
 )
 
+type setDeadLineFunc func(t time.Time) error
+
+func defaultSetDeadline(t time.Time) error {
+	return fmt.Errorf("not impl")
+}
+
+var defaultNoAddr = newNetAddrWithString("unknown", "no addr")
+
 type IOConn struct {
-	r     io.Reader
-	w     io.Writer
-	c     io.Closer
-	lAddr net.Addr
-	rAddr net.Addr
-	net.Conn
+	r                io.Reader
+	w                io.Writer
+	c                io.Closer
+	lAddr            net.Addr
+	rAddr            net.Addr
+	setReadDeadLine  setDeadLineFunc
+	setWriteDeadLine setDeadLineFunc
+	setDeadLine      setDeadLineFunc
 }
 
 type netAddr struct {
@@ -32,6 +44,10 @@ func newNetAddrWithString(network string, addr string) net.Addr {
 }
 
 func WrapConn(basic net.Conn, r io.Reader, w io.Writer, c io.Closer) net.Conn {
+	return WrapConnToIOConn(basic, r, w, c)
+}
+
+func WrapConnToIOConn(basic net.Conn, r io.Reader, w io.Writer, c io.Closer) *IOConn {
 	ioc := NewIOConn(basic)
 	if r != nil {
 		ioc.ReplaceReader(r)
@@ -45,13 +61,24 @@ func WrapConn(basic net.Conn, r io.Reader, w io.Writer, c io.Closer) net.Conn {
 	return ioc
 }
 
+func WrapReadWriteCloserToIOConn(rwc io.ReadWriteCloser) *IOConn {
+	return newIOConn(rwc, rwc, rwc, defaultNoAddr, defaultNoAddr, defaultSetDeadline, defaultSetDeadline, defaultSetDeadline)
+}
+
 func NewIOConn(base net.Conn) *IOConn {
+	return newIOConn(base, base, base, base.LocalAddr(), base.RemoteAddr(), base.SetDeadline, base.SetReadDeadline, base.SetWriteDeadline)
+}
+
+func newIOConn(r io.Reader, w io.Writer, c io.Closer, laddr net.Addr, raddr net.Addr, sd, srd, swd setDeadLineFunc) *IOConn {
 	return &IOConn{
-		r:     base,
-		w:     base,
-		c:     base,
-		lAddr: base.LocalAddr(),
-		rAddr: base.RemoteAddr(),
+		r:                r,
+		w:                w,
+		c:                c,
+		lAddr:            laddr,
+		rAddr:            raddr,
+		setDeadLine:      sd,
+		setReadDeadLine:  srd,
+		setWriteDeadLine: swd,
 	}
 }
 
@@ -106,4 +133,16 @@ func (c *IOConn) LocalAddr() net.Addr {
 
 func (c *IOConn) RemoteAddr() net.Addr {
 	return c.rAddr
+}
+
+func (c *IOConn) SetDeadline(t time.Time) error {
+	return c.setDeadLine(t)
+}
+
+func (c *IOConn) SetReadDeadline(t time.Time) error {
+	return c.setReadDeadLine(t)
+}
+
+func (c *IOConn) SetWriteDeadline(t time.Time) error {
+	return c.setWriteDeadLine(t)
 }
