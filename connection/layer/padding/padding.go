@@ -47,7 +47,7 @@ func (p *paddingLayer) Name() string {
 	return paddingLayerName
 }
 
-func (d *paddingLayer) MakeLayerContext(ctx context.Context, conn net.Conn) (net.Conn, error) {
-	c := iotool.WrapPadding(conn, d.c.PaddingMin, d.c.PaddingMax, d.c.PaddingIfLessThan, d.c.MaxBusiDataPerPacket)
+func (p *paddingLayer) MakeLayerContext(ctx context.Context, conn net.Conn) (net.Conn, error) {
+	c := iotool.WrapPadding(conn, p.c.PaddingMin, p.c.PaddingMax, p.c.PaddingIfLessThan, p.c.MaxBusiDataPerPacket)
 	return iotool.WrapConn(conn, c, c, c), nil
 }
