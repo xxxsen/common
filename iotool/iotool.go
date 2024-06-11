@@ -9,9 +9,13 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	defaultBufSize = 32 * 1024
+)
+
 func makeBuf(sz int64) []byte {
 	if sz == 0 {
-		return nil
+		sz = defaultBufSize
 	}
 	return make([]byte, sz)
 }
