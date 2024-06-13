@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	layer.Regist(wsServerLayerName, createWsServerLayer)
+	layer.Register(wsServerLayerName, createWsServerLayer)
 }
 
 func createWsServerLayer(params interface{}) (layer.ILayer, error) {

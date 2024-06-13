@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	layer.Regist(httpUpgradeServerLayerName, createHttpUpgradeServerLayer)
+	layer.Register(httpUpgradeServerLayerName, createHttpUpgradeServerLayer)
 }
 
 func createHttpUpgradeServerLayer(params interface{}) (layer.ILayer, error) {

@@ -7,9 +7,9 @@ import (
 	"sort"
 )
 
-var m = make(map[string]LayerCreatorFunc)
+var m = make(map[string]CreatorFunc)
 
-func Regist(name string, ds LayerCreatorFunc) {
+func Register(name string, ds CreatorFunc) {
 	m[name] = ds
 }
 
@@ -22,7 +22,7 @@ func Layers() []string {
 	return rs
 }
 
-func MustGet(name string) LayerCreatorFunc {
+func MustGet(name string) CreatorFunc {
 	v, ok := Get(name)
 	if !ok {
 		panic(fmt.Sprintf("not found layer:%s", name))
@@ -30,7 +30,7 @@ func MustGet(name string) LayerCreatorFunc {
 	return v
 }
 
-func Get(name string) (LayerCreatorFunc, bool) {
+func Get(name string) (CreatorFunc, bool) {
 	v, ok := m[name]
 	if !ok {
 		return nil, false
@@ -38,7 +38,7 @@ func Get(name string) (LayerCreatorFunc, bool) {
 	return v, true
 }
 
-type LayerCreatorFunc func(params interface{}) (ILayer, error)
+type CreatorFunc func(params interface{}) (ILayer, error)
 
 type ILayer interface {
 	Name() string

@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	layer.Regist(messageLayerName, createMessageLayer)
+	layer.Register(messageLayerName, createMessageLayer)
 }
 
 func createMessageLayer(params interface{}) (layer.ILayer, error) {

@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	layer.Regist(tlsDialLayerName, createTLSDialLayer)
+	layer.Register(tlsDialLayerName, createTLSDialLayer)
 }
 
 type itlsconn interface {

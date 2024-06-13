@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	layer.Regist(tlsServerLayerName, createTlsServerLayer)
+	layer.Register(tlsServerLayerName, createTlsServerLayer)
 }
 
 func createTlsServerLayer(params interface{}) (layer.ILayer, error) {

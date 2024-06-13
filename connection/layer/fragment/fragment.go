@@ -135,5 +135,5 @@ func createFragmentLayer(param interface{}) (layer.ILayer, error) {
 }
 
 func init() {
-	layer.Regist(fragmentLayerName, createFragmentLayer)
+	layer.Register(fragmentLayerName, createFragmentLayer)
 }

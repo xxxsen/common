@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	layer.Regist(wsDialLayerName, createWsDialLayer)
+	layer.Register(wsDialLayerName, createWsDialLayer)
 }
 
 type wsDialLayer struct {

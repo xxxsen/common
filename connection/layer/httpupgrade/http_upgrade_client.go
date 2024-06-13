@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	layer.Regist(httpUpgradeClientLayerName, createHttpUpgradeClientLayer)
+	layer.Register(httpUpgradeClientLayerName, createHttpUpgradeClientLayer)
 }
 
 func createHttpUpgradeClientLayer(params interface{}) (layer.ILayer, error) {
@@ -52,7 +52,7 @@ func (d *httpUpgradeClientLayer) MakeLayerContext(ctx context.Context, conn net.
 	if d.c.PaddingMax > 0 {
 		req.Header.Set(httpPaddingKey, utils.RandString(int(d.c.PaddingMin), int(d.c.PaddingMax)))
 	}
-	protocol := defaulthttpUpgradeProtocol
+	protocol := defaultHTTPUpgradeProtocol
 	if len(d.c.UpgradeProtocol) != 0 {
 		protocol = d.c.UpgradeProtocol
 	}

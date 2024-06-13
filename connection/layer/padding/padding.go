@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	layer.Regist(paddingLayerName, createPaddingLayer)
+	layer.Register(paddingLayerName, createPaddingLayer)
 }
 
 func createPaddingLayer(param interface{}) (layer.ILayer, error) {

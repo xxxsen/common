@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	layer.Regist(messageLayerName, createMessageLayer)
+	layer.Register(messageLayerName, createMessageLayer)
 }
 
 func parseAction(idx int, params string) (*action, error) {
@@ -71,7 +71,7 @@ type messageLayer struct {
 	acts []*action
 }
 
-func (p *messageLayer) Name() string {
+func (d *messageLayer) Name() string {
 	return messageLayerName
 }
 

@@ -19,7 +19,7 @@ const (
 )
 
 func init() {
-	layer.Regist(httpRequestRewriteDialerName, createHTTPRequestRewriteLayer)
+	layer.Register(httpRequestRewriteDialerName, createHTTPRequestRewriteLayer)
 }
 
 func createHTTPRequestRewriteLayer(params interface{}) (layer.ILayer, error) {
