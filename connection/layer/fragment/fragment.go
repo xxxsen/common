@@ -26,7 +26,7 @@ func (f *fragmentLayer) Name() string {
 }
 
 func (f *fragmentLayer) MakeLayerContext(ctx context.Context, conn net.Conn) (net.Conn, error) {
-	return newFramentConn(conn, f.c), nil
+	return newFragmentConn(conn, f.c), nil
 }
 
 type fragmentConn struct {
@@ -36,7 +36,7 @@ type fragmentConn struct {
 	net.Conn
 }
 
-func newFramentConn(conn net.Conn, c *config) net.Conn {
+func newFragmentConn(conn net.Conn, c *config) net.Conn {
 	return &fragmentConn{Conn: conn, c: c, isNeedFrag: true, packetId: 0}
 }
 

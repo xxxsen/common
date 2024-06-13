@@ -38,7 +38,7 @@ type messageLayer struct {
 	c *config
 }
 
-func (p *messageLayer) Name() string {
+func (d *messageLayer) Name() string {
 	return messageLayerName
 }
 

@@ -41,7 +41,7 @@ type httpUpgradeServerLayer struct {
 	c *svrConfig
 }
 
-func (c *httpUpgradeServerLayer) Name() string {
+func (d *httpUpgradeServerLayer) Name() string {
 	return httpUpgradeServerLayerName
 }
 
