@@ -3,8 +3,8 @@ package iotool
 import (
 	"context"
 	"io"
+	"sync"
 
-	"github.com/xxxsen/common/errs"
 	"github.com/xxxsen/common/logutil"
 	"go.uber.org/zap"
 )
@@ -13,43 +13,29 @@ const (
 	defaultBufSize = 32 * 1024
 )
 
-func makeBuf(sz int64) []byte {
-	if sz == 0 {
-		sz = defaultBufSize
+var bufPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, defaultBufSize)
+	},
+}
+
+func transfer(w io.Writer, r io.Reader, errs chan<- error) {
+	buf := bufPool.Get().([]byte)
+	defer bufPool.Put(buf)
+	_, err := io.CopyBuffer(w, r, buf)
+	if err == io.EOF {
+		err = nil
 	}
-	return make([]byte, sz)
+	errs <- err
 }
 
-func ProxyStreamWithBuffer(ctx context.Context, left, right io.ReadWriteCloser, bufsz int64) error {
-	defer func() {
-		el := left.Close()
-		er := right.Close()
-		if el != nil || er != nil {
-			logutil.GetLogger(ctx).Error("proxy stream may fail", zap.Any("left_err", el), zap.Any("right_err", er))
-		}
-	}()
+func ProxyStream(ctx context.Context, left, right io.ReadWriter) error {
 	ch := make(chan error, 2)
-	go func() {
-		_, err := io.CopyBuffer(left, right, makeBuf(bufsz))
-		if err != nil {
-			ch <- errs.Wrap(errs.ErrIO, "copy right to left fail", err)
-			return
-		}
-		ch <- nil
-	}()
-	go func() {
-		_, err := io.CopyBuffer(right, left, makeBuf(bufsz))
-		if err != nil {
-			ch <- errs.Wrap(errs.ErrIO, "copy left to right fail", err)
-			return
-		}
-		ch <- nil
-	}()
+	go transfer(left, right, ch)
+	go transfer(right, left, ch)
 	err := <-ch
-	logutil.GetLogger(ctx).With(zap.Error(err)).Debug("proxy thread exit")
+	if err != nil {
+		logutil.GetLogger(ctx).With(zap.Error(err)).Error("proxy stream err")
+	}
 	return err
-}
-
-func ProxyStream(ctx context.Context, left, right io.ReadWriteCloser) error {
-	return ProxyStreamWithBuffer(ctx, left, right, 0)
 }
