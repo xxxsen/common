@@ -5,11 +5,18 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/xxxsen/common/utils"
 
 	"github.com/xxxsen/common/errs"
 )
+
+var defaultPaddingTempBufSize = 2
+
+var paddingTempBufPool = sync.Pool{New: func() interface{} {
+	return make([]byte, defaultPaddingTempBufSize)
+}}
 
 type Padding struct {
 	closer                io.Closer
@@ -78,8 +85,15 @@ func (p *Padding) Read(b []byte) (int, error) {
 	return sz, nil
 }
 
-func (p *Padding) writeUint16(w io.Writer, v uint16) error {
-	b := make([]byte, 2)
+func (p *Padding) acquireTempBuf() []byte {
+	return paddingTempBufPool.Get().([]byte)
+}
+
+func (p *Padding) releaseTempBuf(res []byte) {
+	paddingTempBufPool.Put(res)
+}
+
+func (p *Padding) writeUint16WithBuffer(w io.Writer, v uint16, b []byte) error {
 	binary.BigEndian.PutUint16(b, v)
 	if _, err := w.Write(b); err != nil {
 		return err
@@ -87,19 +101,19 @@ func (p *Padding) writeUint16(w io.Writer, v uint16) error {
 	return nil
 }
 
-func (p *Padding) circleWrite(b []byte) error {
-	if len(b) == 0 {
+func (p *Padding) circleWrite(data []byte, tempBuf []byte) error {
+	if len(data) == 0 {
 		return errs.New(errs.ErrParam, "write empty data")
 	}
 	//2字节长度+2字节填充长度+n字节填充+m字节数据流
 	var rnd []byte
-	if len(b) < int(p.paddingSizeIfLessThan) {
+	if len(data) < int(p.paddingSizeIfLessThan) {
 		rnd = utils.RandBytes(int(p.min), int(p.max))
 	}
-	if err := p.writeUint16(p.bioRw, uint16(len(b))); err != nil {
+	if err := p.writeUint16WithBuffer(p.bioRw, uint16(len(data)), tempBuf); err != nil {
 		return errs.Wrap(errs.ErrIO, "write total length fail", err)
 	}
-	if err := p.writeUint16(p.bioRw, uint16(len(rnd))); err != nil {
+	if err := p.writeUint16WithBuffer(p.bioRw, uint16(len(rnd)), tempBuf); err != nil {
 		return errs.Wrap(errs.ErrIO, "write padding length fail", err)
 	}
 	if len(rnd) != 0 {
@@ -107,7 +121,7 @@ func (p *Padding) circleWrite(b []byte) error {
 			return errs.Wrap(errs.ErrIO, "write padding fail", err)
 		}
 	}
-	if _, err := p.bioRw.Write(b); err != nil {
+	if _, err := p.bioRw.Write(data); err != nil {
 		return errs.Wrap(errs.ErrIO, "write raw data fail", err)
 	}
 	if err := p.bioRw.Flush(); err != nil {
@@ -117,14 +131,16 @@ func (p *Padding) circleWrite(b []byte) error {
 }
 
 func (p *Padding) Write(b []byte) (int, error) {
+	tempBuf := p.acquireTempBuf()
+	defer p.releaseTempBuf(tempBuf)
 	for i := 0; i < len(b); i += int(p.maxBusiDataLength) {
 		l := i
 		r := i + int(p.maxBusiDataLength)
 		if r > len(b) {
 			r = len(b)
 		}
-		sub := b[l:r]
-		if err := p.circleWrite(sub); err != nil {
+		subData := b[l:r]
+		if err := p.circleWrite(subData, tempBuf); err != nil {
 			return 0, errs.Wrap(errs.ErrIO, fmt.Sprintf("partial write fail, total:%d, write at:%d", len(b), l), err)
 		}
 	}
