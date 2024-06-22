@@ -50,6 +50,10 @@ func (c *aesGCM) Decrypt(buf []byte, key []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
+func (c *aesGCM) Name() string {
+	return CodecAesGCM
+}
+
 func NewAesGCM() ICodec {
 	return &aesGCM{}
 }

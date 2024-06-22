@@ -48,6 +48,10 @@ func (c *aesOFB) Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
+func (c *aesOFB) Name() string {
+	return CodecAesOFB
+}
+
 func NewAesOFB() ICodec {
 	return &aesOFB{}
 }

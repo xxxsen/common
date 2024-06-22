@@ -47,6 +47,10 @@ func (c *aesCTR) Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
+func (c *aesCTR) Name() string {
+	return CodecAesCTR
+}
+
 func NewAesCTR() ICodec {
 	return &aesCTR{}
 }

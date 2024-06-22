@@ -58,6 +58,10 @@ func (c *aesCBC) Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
+func (c *aesCBC) Name() string {
+	return CodecAesCBC
+}
+
 func NewAesCBC() ICodec {
 	return &aesCBC{}
 }

@@ -47,6 +47,10 @@ func (c *aesCFB) Decrypt(buf []byte, key []byte) ([]byte, error) {
 	return buf, nil
 }
 
+func (c *aesCFB) Name() string {
+	return CodecAesCFB
+}
+
 func NewAesCFB() ICodec {
 	return &aesCFB{}
 }

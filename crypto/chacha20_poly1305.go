@@ -39,6 +39,10 @@ func (c *chacha20Poly1305) Decrypt(ciphertext []byte, key []byte) ([]byte, error
 	return plaintext, nil
 }
 
+func (c *chacha20Poly1305) Name() string {
+	return CodecAesChacha20Poly1305
+}
+
 func NewChacha20Poly1305() ICodec {
 	return &chacha20Poly1305{}
 }
