@@ -3,9 +3,7 @@ package crypto
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
 	"fmt"
-	"io"
 )
 
 type aesGCM struct {
@@ -21,9 +19,8 @@ func (c *aesGCM) Encrypt(buf []byte, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	nonce := make([]byte, aesGCM.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+	nonce, err := Nonce(aesGCM.NonceSize())
+	if err != nil {
 		return nil, err
 	}
 

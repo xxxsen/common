@@ -16,6 +16,7 @@ func TestReadWrite(t *testing.T) {
 		NewAesCTR(),
 		NewAesGCM(),
 		NewAesOFB(),
+		NewChacha20Poly1305(),
 	}
 	szs := []int{
 		31*1024 + 123,

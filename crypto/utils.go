@@ -2,8 +2,10 @@ package crypto
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"io"
 )
 
 func DeriveKey(in []byte) []byte {
@@ -30,4 +32,13 @@ func UnPadding(src []byte, blksize int) ([]byte, error) {
 		return nil, fmt.Errorf("unpad: invalid padding size")
 	}
 	return src[:length-padding], nil
+}
+
+func Nonce(sz int) ([]byte, error) {
+	nonce := make([]byte, sz)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+	return nonce, nil
+
 }
