@@ -57,3 +57,7 @@ func (c *aesGCM) Name() string {
 func NewAesGCM() ICodec {
 	return &aesGCM{}
 }
+
+func init() {
+	register(NewAesGCM())
+}

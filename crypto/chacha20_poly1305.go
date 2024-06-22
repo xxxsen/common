@@ -46,3 +46,7 @@ func (c *chacha20Poly1305) Name() string {
 func NewChacha20Poly1305() ICodec {
 	return &chacha20Poly1305{}
 }
+
+func init() {
+	register(NewChacha20Poly1305())
+}

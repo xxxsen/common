@@ -54,3 +54,7 @@ func (c *aesCTR) Name() string {
 func NewAesCTR() ICodec {
 	return &aesCTR{}
 }
+
+func init() {
+	register(NewAesCTR())
+}

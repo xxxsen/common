@@ -55,3 +55,7 @@ func (c *aesOFB) Name() string {
 func NewAesOFB() ICodec {
 	return &aesOFB{}
 }
+
+func init() {
+	register(NewAesOFB())
+}

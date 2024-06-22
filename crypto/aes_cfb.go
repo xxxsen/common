@@ -54,3 +54,7 @@ func (c *aesCFB) Name() string {
 func NewAesCFB() ICodec {
 	return &aesCFB{}
 }
+
+func init() {
+	register(NewAesCFB())
+}

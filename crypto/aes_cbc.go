@@ -65,3 +65,7 @@ func (c *aesCBC) Name() string {
 func NewAesCBC() ICodec {
 	return &aesCBC{}
 }
+
+func init() {
+	register(NewAesCBC())
+}
