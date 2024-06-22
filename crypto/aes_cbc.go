@@ -15,7 +15,10 @@ type aesCBC struct {
 func (c *aesCBC) pad(src []byte) []byte {
 	padding := aes.BlockSize - len(src)%aes.BlockSize
 	padText := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(src, padText...)
+	out := make([]byte, len(padText)+len(src))
+	copy(out, src)
+	copy(out[len(src):], padText)
+	return out
 }
 
 func (c *aesCBC) Encrypt(plaintext []byte, key []byte) ([]byte, error) {
