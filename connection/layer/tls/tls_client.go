@@ -3,6 +3,7 @@ package tls
 import (
 	"context"
 	ctls "crypto/tls"
+	"math/rand"
 	"net"
 
 	"github.com/xxxsen/common/connection/layer"
@@ -33,7 +34,22 @@ func createTLSDialLayer(params interface{}) (layer.ILayer, error) {
 			return nil, errs.New(errs.ErrParam, "invalid finger print str:%s", c.FingerPrint)
 		}
 	}
+	c.SNIs = append(c.SNIs, c.SNI)
+	c.SNIs = dedup(c.SNIs)
 	return &tlsDialLayer{c: c}, nil
+}
+
+func dedup(lst []string) []string {
+	rs := make([]string, 0, len(lst))
+	exist := make(map[string]struct{}, len(lst))
+	for _, item := range lst {
+		if _, ok := exist[item]; ok {
+			continue
+		}
+		rs = append(rs, item)
+		exist[item] = struct{}{}
+	}
+	return rs
 }
 
 type tlsDialLayer struct {
@@ -44,10 +60,17 @@ func (d *tlsDialLayer) Name() string {
 	return tlsDialLayerName
 }
 
+func (d *tlsDialLayer) selectSNI() string {
+	if len(d.c.SNIs) == 0 {
+		return ""
+	}
+	return d.c.SNIs[rand.Int()%len(d.c.SNIs)]
+}
+
 func (d *tlsDialLayer) createTlsConn(conn net.Conn, fingerprint string) itlsconn {
 	if len(d.c.FingerPrint) == 0 {
 		tlsconn := ctls.Client(conn, &ctls.Config{
-			ServerName:         d.c.SNI,
+			ServerName:         d.selectSNI(),
 			InsecureSkipVerify: d.c.SkipInsecureVerify,
 			MinVersion:         GetVersionIdByNameOrDefault(d.c.MinTLSVersion),
 			MaxVersion:         GetVersionIdByNameOrDefault(d.c.MaxTLSVersion),

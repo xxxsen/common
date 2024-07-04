@@ -1,11 +1,12 @@
 package tls
 
 type cliConfig struct {
-	SNI                string `json:"sni"`
-	SkipInsecureVerify bool   `json:"skip_insecure_verify"`
-	FingerPrint        string `json:"fingerprint"`
-	MinTLSVersion      string `json:"min_tls_version"`
-	MaxTLSVersion      string `json:"max_tls_version"`
+	SNI                string   `json:"sni"`
+	SNIs               []string `json:"snis"`
+	SkipInsecureVerify bool     `json:"skip_insecure_verify"`
+	FingerPrint        string   `json:"fingerprint"`
+	MinTLSVersion      string   `json:"min_tls_version"`
+	MaxTLSVersion      string   `json:"max_tls_version"`
 }
 
 type svrConfig struct {
