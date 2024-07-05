@@ -34,7 +34,9 @@ func createTLSDialLayer(params interface{}) (layer.ILayer, error) {
 			return nil, errs.New(errs.ErrParam, "invalid finger print str:%s", c.FingerPrint)
 		}
 	}
-	c.SNIs = append(c.SNIs, c.SNI)
+	if len(c.SNI) != 0 {
+		c.SNIs = append(c.SNIs, c.SNI)
+	}
 	c.SNIs = dedup(c.SNIs)
 	return &tlsDialLayer{c: c}, nil
 }
