@@ -3,6 +3,7 @@ package httprewrite
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"net"
 
@@ -10,8 +11,6 @@ import (
 
 	"github.com/xxxsen/common/iotool"
 	"github.com/xxxsen/common/utils"
-
-	"github.com/xxxsen/common/errs"
 )
 
 const (
@@ -42,7 +41,7 @@ func (d *httpRequestRewriteLayer) MakeLayerContext(ctx context.Context, conn net
 	bio := bufio.NewReader(conn)
 	httpctx, err := ParseBasicHTTPRequestContext(bio)
 	if err != nil {
-		return nil, errs.Wrap(errs.ErrServiceInternal, "read basic http context fail", err)
+		return nil, fmt.Errorf("read basic http context failed, err:%w", err)
 	}
 	if len(d.c.RewritePath) != 0 {
 		httpctx.URL.Path = d.c.RewritePath
@@ -62,7 +61,7 @@ func (d *httpRequestRewriteLayer) MakeLayerContext(ctx context.Context, conn net
 	}
 	reader, err := httpctx.ToReader(d.c.ForceUseProxy)
 	if err != nil {
-		return nil, errs.Wrap(errs.ErrServiceInternal, "http to reader fail", err)
+		return nil, fmt.Errorf("http to reader failed, err:%w", err)
 	}
 	reader = io.MultiReader(reader, bio)
 	return iotool.WrapConn(conn, reader, nil, nil), nil

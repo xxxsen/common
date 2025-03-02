@@ -10,8 +10,6 @@ import (
 	"net/textproto"
 	"net/url"
 	"strings"
-
-	"github.com/xxxsen/common/errs"
 )
 
 type BasicHTTPRequestContext struct {
@@ -25,7 +23,7 @@ type BasicHTTPRequestContext struct {
 func ParseBasicHTTPRequestContext(bio *bufio.Reader) (*BasicHTTPRequestContext, error) {
 	c := &BasicHTTPRequestContext{}
 	if err := c.Parse(bio); err != nil {
-		return nil, errs.Wrap(errs.ErrServiceInternal, "parse fail", err)
+		return nil, fmt.Errorf("parse failed, err:%w", err)
 	}
 	return c, nil
 }
@@ -38,17 +36,17 @@ func (c *BasicHTTPRequestContext) Parse(bio *bufio.Reader) error {
 	//\r\n
 	firstline, err := reader.ReadLine()
 	if err != nil {
-		return errs.Wrap(errs.ErrIO, "read first line fail", err)
+		return fmt.Errorf("read first line failed, err:%w", err)
 	}
 	header, err := reader.ReadMIMEHeader()
 	if err != nil {
-		return errs.Wrap(errs.ErrIO, "read header fail", err)
+		return fmt.Errorf("read header failed, err:%w", err)
 	}
 	c.Header = http.Header(header)
 	method, rest, ok1 := strings.Cut(firstline, " ")
 	requestURI, proto, ok2 := strings.Cut(rest, " ")
 	if !ok1 || !ok2 {
-		return errs.New(errs.ErrParam, "invalid http first line:<%s>", hex.EncodeToString([]byte(firstline)))
+		return fmt.Errorf("invalid http first line:<%s>", hex.EncodeToString([]byte(firstline)))
 	}
 	justAuthority := strings.EqualFold(method, http.MethodConnect) && !strings.HasPrefix(requestURI, "/")
 	if justAuthority {
@@ -56,11 +54,11 @@ func (c *BasicHTTPRequestContext) Parse(bio *bufio.Reader) error {
 	}
 	uri, err := url.ParseRequestURI(requestURI)
 	if err != nil {
-		return errs.Wrap(errs.ErrParam, fmt.Sprintf("parse request uri fail, uri:%s", requestURI), err)
+		return fmt.Errorf("parse request uri failed, uri:%s, err:%w", requestURI, err)
 	}
 	mj, mn, ok := http.ParseHTTPVersion(proto)
 	if !ok {
-		return errs.Wrap(errs.ErrParam, "parse http version fail", err)
+		return fmt.Errorf("parse http version failed, err:%w", err)
 	}
 	c.Method = method
 	c.URL = uri
@@ -91,11 +89,11 @@ func (c *BasicHTTPRequestContext) ToReader(useproxy bool) (io.Reader, error) {
 	buf := bytes.NewBuffer(nil)
 	ruri, err := c.buildUri(useproxy)
 	if err != nil {
-		return nil, errs.Wrap(errs.ErrParam, "build ruri fail", err)
+		return nil, fmt.Errorf("build ruri failed, err:%w", err)
 	}
 	buf.WriteString(fmt.Sprintf("%s %s HTTP/%d.%d\r\n", c.Method, ruri, c.HTTPVersionMajor, c.HTTPVersionMinor))
 	if err := c.Header.Write(buf); err != nil {
-		return nil, errs.Wrap(errs.ErrIO, "write header fail", err)
+		return nil, fmt.Errorf("write header failed, err:%w", err)
 	}
 	_, _ = io.WriteString(buf, "\r\n")
 	return buf, nil

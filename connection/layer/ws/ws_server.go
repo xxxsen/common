@@ -18,7 +18,6 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"github.com/xxxsen/common/errs"
 	"github.com/xxxsen/common/logutil"
 	"go.uber.org/zap"
 )
@@ -79,7 +78,7 @@ func (d *wsServerLayer) MakeLayerContext(ctx context.Context, conn net.Conn) (ne
 	}
 	_, err := ug.Upgrade(conn)
 	if err != nil {
-		return nil, errs.Wrap(errs.ErrIO, fmt.Sprintf("upgrade conn fail, err detail:[%+v]", errDetail), err)
+		return nil, fmt.Errorf("upgrade conn fail, err detail:[%+v], err:%w", errDetail, err)
 	}
 
 	svrio := newWsServerIO(conn)
@@ -108,7 +107,7 @@ func (w *wsServerIO) Read(b []byte) (int, error) {
 			return 0, err
 		}
 		if len(data) == 0 {
-			return 0, errs.New(errs.ErrParam, "read data count == 0")
+			return 0, fmt.Errorf("read data count == 0")
 		}
 		w.buf.Write(data)
 	}

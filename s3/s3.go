@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/xxxsen/common/errs"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -35,10 +33,11 @@ func toBase64MD5CheckSum(val string) *string {
 	return aws.String(base64.StdEncoding.EncodeToString(raw))
 }
 
+// Deprecated: should not use
 func InitGlobal(opts ...Option) error {
 	client, err := New(opts...)
 	if err != nil {
-		return errs.Wrap(errs.ErrS3, "init s3", err)
+		return fmt.Errorf("init s3 failed, err:%w", err)
 	}
 	Client = client
 	return nil
@@ -53,7 +52,7 @@ func New(opts ...Option) (*S3Client, error) {
 		opt(c)
 	}
 	if len(c.bucket) == 0 {
-		return nil, errs.New(errs.ErrParam, "nil bucket name")
+		return nil, fmt.Errorf("nil bucket name")
 	}
 
 	credit := credentials.NewStaticCredentials(c.secretId, c.secretKey, "")
@@ -66,7 +65,7 @@ func New(opts ...Option) (*S3Client, error) {
 		S3ForcePathStyle: aws.Bool(true),
 	})
 	if err != nil {
-		return nil, errs.Wrap(errs.ErrS3, "init session fail", err)
+		return nil, fmt.Errorf("init s3 session failed, err:%w", err)
 	}
 	client := s3.New(sess)
 	return &S3Client{c: c, client: client, sess: sess}, nil
@@ -82,7 +81,7 @@ func (c *S3Client) DownloadByRange(ctx context.Context, fileid string, at int64)
 	}
 	output, err := c.client.GetObject(input)
 	if err != nil {
-		return nil, errs.Wrap(errs.ErrS3, "get obj fail", err)
+		return nil, fmt.Errorf("get object failed, err:%w", err)
 	}
 	return output.Body, nil
 }
@@ -102,7 +101,7 @@ func (c *S3Client) Upload(ctx context.Context, fileid string, r io.ReadSeeker, s
 	}
 	rsp, err := c.client.PutObject(input)
 	if err != nil {
-		return "", errs.Wrap(errs.ErrS3, "write obj fail", err)
+		return "", fmt.Errorf("put object failed, err:%w", err)
 	}
 	return c.unquote(*rsp.ETag), nil
 }
@@ -113,7 +112,7 @@ func (c *S3Client) Remove(ctx context.Context, fileid string) error {
 		Key:    aws.String(fileid),
 	})
 	if err != nil {
-		return errs.Wrap(errs.ErrS3, "delete fail", err)
+		return fmt.Errorf("remove object failed, err:%w", err)
 	}
 	return nil
 }
@@ -124,7 +123,7 @@ func (c *S3Client) BeginUpload(ctx context.Context, fileid string) (string, erro
 		Key:    aws.String(fileid),
 	})
 	if err != nil {
-		return "", errs.Wrap(errs.ErrS3, "create multi part upload fail", err)
+		return "", fmt.Errorf("create multi part upload fail, err:%w", err)
 	}
 	return *output.UploadId, nil
 }
@@ -142,7 +141,7 @@ func (c *S3Client) UploadPart(ctx context.Context, fileid string, uploadid strin
 	}
 	_, err := c.client.UploadPart(input)
 	if err != nil {
-		return errs.Wrap(errs.ErrS3, "put part fail", err)
+		return fmt.Errorf("put part failed, err:%w", err)
 	}
 	return nil
 }
@@ -155,7 +154,7 @@ func (c *S3Client) listParts(ctx context.Context, fileid string, uploadid string
 		UploadId:            aws.String(uploadid),
 	})
 	if err != nil {
-		return nil, errs.Wrap(errs.ErrS3, "list part fail", err)
+		return nil, fmt.Errorf("list part failed, err:%w", err)
 	}
 	return output.Parts, nil
 }
@@ -181,7 +180,7 @@ func (c *S3Client) EndUpload(ctx context.Context, fileid string, uploadid string
 		return "", err
 	}
 	if len(parts) != partcount {
-		return "", errs.New(errs.ErrParam, "part count not match, need:%d, get:%d", partcount, len(parts))
+		return "", fmt.Errorf("part count not match, need:%d, get:%d", partcount, len(parts))
 	}
 	rsp, err := c.client.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
 		Bucket: aws.String(c.c.bucket),
@@ -192,7 +191,7 @@ func (c *S3Client) EndUpload(ctx context.Context, fileid string, uploadid string
 		UploadId: aws.String(uploadid),
 	})
 	if err != nil {
-		return "", errs.Wrap(errs.ErrS3, "finish upload fail", err)
+		return "", fmt.Errorf("finish upload failed, err:%w", err)
 	}
 	return c.unquote(*rsp.ETag), nil
 }
@@ -204,7 +203,7 @@ func (c *S3Client) DiscardMultiPartUpload(ctx context.Context, fileid string, up
 		UploadId: aws.String(uploadid),
 	})
 	if err != nil {
-		return errs.Wrap(errs.ErrS3, "abort multipart upload fail", err)
+		return fmt.Errorf("abort multipart upload failed, err:%w", err)
 	}
 	return nil
 }
@@ -219,7 +218,7 @@ func (c *S3Client) GetFileInfo(ctx context.Context, fileid string) (*ObjectMetaI
 		Key:    aws.String(fileid),
 	})
 	if err != nil {
-		return nil, errs.Wrap(errs.ErrS3, "get obj info from s3 fail", err)
+		return nil, fmt.Errorf("get object info from s3 failed, err:%w", err)
 	}
 	return &ObjectMetaInfo{
 		ETag: aws.String(c.unquote(*out.ETag)),

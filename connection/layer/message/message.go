@@ -10,8 +10,6 @@ import (
 	"github.com/xxxsen/common/connection/layer"
 
 	"github.com/xxxsen/common/utils"
-
-	"github.com/xxxsen/common/errs"
 )
 
 func init() {
@@ -25,10 +23,10 @@ func createMessageLayer(params interface{}) (layer.ILayer, error) {
 	}
 	for idx, act := range c.Actions {
 		if act.Length == 0 {
-			return nil, errs.New(errs.ErrParam, "invalid length, idx:%d", idx)
+			return nil, fmt.Errorf("invalid length, idx:%d", idx)
 		}
 		if strings.EqualFold(act.Type, actionTypeSend) && strings.EqualFold(act.Type, actionTypeRecv) {
-			return nil, errs.New(errs.ErrParam, "action type invalid")
+			return nil, fmt.Errorf("action type invalid")
 		}
 	}
 	return &messageLayer{c: c}, nil
@@ -46,12 +44,12 @@ func (d *messageLayer) MakeLayerContext(ctx context.Context, conn net.Conn) (net
 	for idx, act := range d.c.Actions {
 		if strings.EqualFold(act.Type, actionTypeSend) {
 			if _, err := conn.Write(utils.RandBytes(int(act.Length), int(act.Length))); err != nil {
-				return nil, errs.Wrap(errs.ErrIO, fmt.Sprintf("send msg fail at idx:%d", idx), err)
+				return nil, fmt.Errorf("send msg fail at idx:%d, err:%w", idx, err)
 			}
 		}
 		if strings.EqualFold(act.Type, actionTypeRecv) {
 			if _, err := io.CopyN(io.Discard, conn, int64(act.Length)); err != nil {
-				return nil, errs.Wrap(errs.ErrIO, fmt.Sprintf("recv msg fail at idx:%d", idx), err)
+				return nil, fmt.Errorf("recv msg fail at idx:%d, err:%w", idx, err)
 			}
 		}
 	}

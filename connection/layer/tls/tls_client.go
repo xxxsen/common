@@ -3,6 +3,7 @@ package tls
 import (
 	"context"
 	ctls "crypto/tls"
+	"fmt"
 	"math/rand"
 	"net"
 
@@ -10,7 +11,6 @@ import (
 
 	utls "github.com/refraction-networking/utls"
 
-	"github.com/xxxsen/common/errs"
 	"github.com/xxxsen/common/utils"
 )
 
@@ -31,7 +31,7 @@ func createTLSDialLayer(params interface{}) (layer.ILayer, error) {
 	}
 	if len(c.FingerPrint) > 0 {
 		if _, ok := mappingHelloID[c.FingerPrint]; !ok {
-			return nil, errs.New(errs.ErrParam, "invalid finger print str:%s", c.FingerPrint)
+			return nil, fmt.Errorf("invalid finger print str:%s", c.FingerPrint)
 		}
 	}
 	if len(c.SNI) != 0 {
@@ -88,11 +88,11 @@ func (d *tlsDialLayer) createTlsConn(conn net.Conn, fingerprint string) itlsconn
 func (d *tlsDialLayer) MakeLayerContext(ctx context.Context, conn net.Conn) (net.Conn, error) {
 	tlsconn := d.createTlsConn(conn, d.c.FingerPrint)
 	if err := tlsconn.HandshakeContext(ctx); err != nil {
-		return nil, errs.Wrap(errs.ErrIO, "handshake tls fail", err)
+		return nil, fmt.Errorf("handshake tls failed, err:%w", err)
 	}
 	if !d.c.SkipInsecureVerify {
 		if err := tlsconn.VerifyHostname(d.c.SNI); err != nil {
-			return nil, errs.Wrap(errs.ErrUnknown, "verify tls host name fail", err)
+			return nil, fmt.Errorf("verify tls host name failed, err:%w", err)
 		}
 	}
 	return tlsconn, nil

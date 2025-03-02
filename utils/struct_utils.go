@@ -1,8 +1,9 @@
 package utils
 
 import (
+	"fmt"
+
 	"github.com/mitchellh/mapstructure"
-	"github.com/xxxsen/common/errs"
 )
 
 func ConvStructJson(src interface{}, dst interface{}) error {
@@ -11,10 +12,10 @@ func ConvStructJson(src interface{}, dst interface{}) error {
 		Result:  dst,
 	})
 	if err != nil {
-		return errs.Wrap(errs.ErrParam, "create decoder fail", err)
+		return fmt.Errorf("create decoder failed, err:%w", err)
 	}
 	if err := c.Decode(src); err != nil {
-		return errs.Wrap(errs.ErrUnmarshal, "decode type fail", err)
+		return fmt.Errorf("decode type failed, err:%w", err)
 	}
 	return nil
 }

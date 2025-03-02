@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-
-	"github.com/xxxsen/common/errs"
 )
 
 type Group struct {
@@ -27,7 +25,7 @@ func (g *Group) MakeLayerContext(ctx context.Context, conn net.Conn) (net.Conn, 
 	for _, d := range g.ds {
 		conn, err = d.MakeLayerContext(ctx, conn)
 		if err != nil {
-			return nil, errs.Wrap(errs.ErrIO, fmt.Sprintf("make layer fail, layer name:%s", d.Name()), err)
+			return nil, fmt.Errorf("make layer fail, layer name:%s, err:%w", d.Name(), err)
 		}
 	}
 	return conn, nil

@@ -3,12 +3,11 @@ package cmder
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"os/exec"
 	"syscall"
 )
 
-type CMDer struct {
+type Cmder struct {
 	uid     *uint32
 	gid     *uint32
 	workdir string
@@ -16,22 +15,30 @@ type CMDer struct {
 	err     io.Writer
 }
 
+// Deprecated: use Cmder
+type CMDer = Cmder
+
+// Deprecated: use New
 func NewCMD(workdir string) *CMDer {
-	return &CMDer{workdir: workdir, out: ioutil.Discard, err: ioutil.Discard}
+	return New(workdir)
 }
 
-func (c *CMDer) SetID(uid uint32, gid uint32) {
+func New(workdir string) *Cmder {
+	return &Cmder{workdir: workdir, out: io.Discard, err: io.Discard}
+}
+
+func (c *Cmder) SetID(uid uint32, gid uint32) {
 	c.uid = &uid
 	c.gid = &gid
 }
 
-func (c *CMDer) SetOutput(out io.Writer, err io.Writer) *CMDer {
+func (c *Cmder) SetOutput(out io.Writer, err io.Writer) *Cmder {
 	c.out = out
 	c.err = err
 	return c
 }
 
-func (c *CMDer) Run(ctx context.Context, name string, args ...string) error {
+func (c *Cmder) Run(ctx context.Context, name string, args ...string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}

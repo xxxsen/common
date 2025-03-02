@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	"github.com/xxxsen/common/errs"
 )
 
 type IQueryer interface {
@@ -28,10 +26,10 @@ func buildSqlDataSource(c *DBConfig) string {
 func InitDatabase(c *DBConfig) (*sql.DB, error) {
 	client, err := sql.Open("mysql", buildSqlDataSource(c))
 	if err != nil {
-		return nil, errs.Wrap(errs.ErrDatabase, "open db fail", err)
+		return nil, fmt.Errorf("open db failed, err:%w", err)
 	}
 	if err := client.Ping(); err != nil {
-		return nil, errs.Wrap(errs.ErrDatabase, "ping fail", err)
+		return nil, fmt.Errorf("ping failed, err:%w", err)
 	}
 	return client, nil
 }

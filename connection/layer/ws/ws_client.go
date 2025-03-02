@@ -17,7 +17,6 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"github.com/xxxsen/common/errs"
 	"github.com/xxxsen/common/logutil"
 	"github.com/xxxsen/common/utils"
 	"go.uber.org/zap"
@@ -42,11 +41,11 @@ func createWsDialLayer(params interface{}) (layer.ILayer, error) {
 		schema = "http"
 	}
 	if !strings.EqualFold(schema, "http") && !strings.EqualFold(schema, "https") {
-		return nil, errs.New(errs.ErrParam, "invalid schema:%s", schema)
+		return nil, fmt.Errorf("invalid schema:%s", schema)
 	}
 	uri, err := url.Parse(fmt.Sprintf("%s://%s%s", schema, c.Host, c.Path))
 	if err != nil {
-		return nil, errs.Wrap(errs.ErrParam, "invalid uri", err)
+		return nil, fmt.Errorf("invalid uri, err:%w", err)
 	}
 	return &wsDialLayer{
 		c:   c,
@@ -67,7 +66,7 @@ func (d *wsDialLayer) MakeLayerContext(ctx context.Context, conn net.Conn) (net.
 	}
 	bioReader, _, err := dialer.Upgrade(conn, d.uri)
 	if err != nil {
-		return nil, errs.Wrap(errs.ErrIO, "upgrade ws fail", err)
+		return nil, fmt.Errorf("upgrade ws failed, err:%w", err)
 	}
 	pairIO := conn
 	if bioReader != nil {
@@ -99,7 +98,7 @@ func (w *wsClientIO) Read(b []byte) (int, error) {
 			return 0, err
 		}
 		if len(data) == 0 {
-			return 0, errs.New(errs.ErrParam, "read data count == 0")
+			return 0, fmt.Errorf("read data count == 0")
 		}
 		w.buf.Write(data)
 	}

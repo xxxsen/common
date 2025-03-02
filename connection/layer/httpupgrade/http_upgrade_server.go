@@ -14,8 +14,6 @@ import (
 	"github.com/xxxsen/common/iotool"
 
 	"github.com/xxxsen/common/utils"
-
-	"github.com/xxxsen/common/errs"
 )
 
 func init() {
@@ -75,20 +73,20 @@ func (d *httpUpgradeServerLayer) MakeLayerContext(ctx context.Context, conn net.
 	req, err := http.ReadRequest(bio)
 	if err != nil {
 		_ = d.writeFailResponse(conn)
-		return nil, errs.Wrap(errs.ErrIO, "invalid http request", err)
+		return nil, fmt.Errorf("invalid http request, err:%w", err)
 	}
 	headerProtocol := req.Header.Get("Upgrade")
 	//如果本地没有配置upgrade协议, 那么不进行协议校验
 	if len(d.c.UpgradeProtocol) > 0 && headerProtocol != d.c.UpgradeProtocol {
 		_ = d.writeFailResponse(conn)
-		return nil, errs.New(errs.ErrParam, "invalid upgrade protocol:%s", headerProtocol)
+		return nil, fmt.Errorf("invalid upgrade protocol:%s", headerProtocol)
 	}
 	if req.URL.Path != d.c.Path {
 		_ = d.writeFailResponse(conn)
-		return nil, errs.New(errs.ErrParam, "invalid path:%s", req.URL.Path)
+		return nil, fmt.Errorf("invalid path:%s", req.URL.Path)
 	}
 	if err := d.writeUpgradeResponse(conn, headerProtocol); err != nil {
-		return nil, errs.Wrap(errs.ErrIO, "write upgrade response fail", err)
+		return nil, fmt.Errorf("write upgrade response failed, err:%w", err)
 	}
 	return iotool.WrapConn(conn, bio, nil, nil), nil
 }

@@ -12,8 +12,6 @@ import (
 	"github.com/xxxsen/common/connection/layer"
 
 	"github.com/xxxsen/common/utils"
-
-	"github.com/xxxsen/common/errs"
 )
 
 func init() {
@@ -29,7 +27,7 @@ func parseAction(idx int, params string) (*action, error) {
 	switch act {
 	case actionTypeSend:
 		if len(grp) < 2 {
-			return nil, errs.New(errs.ErrParam, "send type should like: send@100-200, get nil params")
+			return nil, fmt.Errorf("send type should like: send@100-200, get nil params")
 		}
 		sendparams := strings.Split(grp[1], "-")
 		minLength, _ = strconv.ParseUint(sendparams[0], 0, 64)
@@ -38,11 +36,11 @@ func parseAction(idx int, params string) (*action, error) {
 			maxLength, _ = strconv.ParseUint(sendparams[1], 0, 64)
 		}
 		if maxLength == 0 {
-			return nil, errs.New(errs.ErrParam, "send type, max length should not eq to 0, idx:%d", idx)
+			return nil, fmt.Errorf("send type, max length should not eq to 0, idx:%d", idx)
 		}
 	case actionTypeRecv:
 	default:
-		return nil, errs.New(errs.ErrParam, "action type:%s invalid", act)
+		return nil, fmt.Errorf("action type:%s invalid", act)
 	}
 	return &action{
 		Type:      act,
@@ -97,7 +95,7 @@ func (d *messageLayer) sendMessage(idx int, w io.Writer, minlength uint, maxleng
 	binary.BigEndian.PutUint16(buf, uint16(len(rndData)))
 	copy(buf[2:], rndData)
 	if _, err := w.Write(buf); err != nil {
-		return errs.Wrap(errs.ErrIO, fmt.Sprintf("send msg fail at idx:%d with length:%d", idx, len(rndData)), err)
+		return fmt.Errorf("send msg fail at idx:%d with length:%d, err:%w", idx, len(rndData), err)
 	}
 	return nil
 }
@@ -106,11 +104,11 @@ func (d *messageLayer) discardMessage(idx int, r io.Reader) error {
 	b := make([]byte, 2)
 	_, err := io.ReadAtLeast(r, b, len(b))
 	if err != nil {
-		return errs.Wrap(errs.ErrIO, fmt.Sprintf("read packet length at idx:%d fail", idx), err)
+		return fmt.Errorf("read packet length at idx:%d failed, err:%w", idx, err)
 	}
 	length := binary.BigEndian.Uint16(b)
 	if _, err := io.CopyN(io.Discard, r, int64(length)); err != nil {
-		return errs.Wrap(errs.ErrIO, fmt.Sprintf("discard packet at idx:%d with length:%d fail", idx, length), err)
+		return fmt.Errorf("discard packet at idx:%d with length:%d failed, err:%w", idx, length, err)
 	}
 	return nil
 }

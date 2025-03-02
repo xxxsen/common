@@ -2,6 +2,7 @@ package fragment
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"math/rand"
 	"net"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/xxxsen/common/connection/layer"
 
-	"github.com/xxxsen/common/errs"
 	"github.com/xxxsen/common/utils"
 )
 
@@ -104,7 +104,7 @@ func (c *fragmentConn) Write(b []byte) (int, error) {
 		buf := b[:nextToSend]
 		b = b[nextToSend:]
 		if _, err := c.Conn.Write(buf); err != nil {
-			return 0, errs.Wrap(errs.ErrIO, "send part pkt fail", err)
+			return 0, fmt.Errorf("send part pkt failed, err:%w", err)
 		}
 		nextInterval := c.calcNextInterval(c.c.IntervalRange)
 		if len(b) != 0 && nextInterval != 0 {
@@ -120,16 +120,16 @@ func createFragmentLayer(param interface{}) (layer.ILayer, error) {
 		return nil, err
 	}
 	if len(dst.IntervalRange) > 2 || len(dst.PacketLengthRange) > 2 || len(dst.PacketNumberRange) > 2 {
-		return nil, errs.New(errs.ErrParam, "invalid fragment params, v:%v", *dst)
+		return nil, fmt.Errorf("invalid fragment params")
 	}
 	if len(dst.IntervalRange) == 2 && dst.IntervalRange[0] > dst.IntervalRange[1] {
-		return nil, errs.New(errs.ErrParam, "invalid interval range")
+		return nil, fmt.Errorf("invalid interval range")
 	}
 	if len(dst.PacketLengthRange) == 2 && dst.PacketLengthRange[0] > dst.PacketLengthRange[1] {
-		return nil, errs.New(errs.ErrParam, "invalid packet length range")
+		return nil, fmt.Errorf("invalid packet length range")
 	}
 	if len(dst.PacketNumberRange) == 2 && dst.PacketNumberRange[0] > dst.PacketNumberRange[1] {
-		return nil, errs.New(errs.ErrParam, "invalid packet number range")
+		return nil, fmt.Errorf("invalid packet number range")
 	}
 	return &fragmentLayer{c: dst}, nil
 }

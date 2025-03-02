@@ -2,14 +2,13 @@ package padding
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/xxxsen/common/connection/layer"
 
 	"github.com/xxxsen/common/iotool"
 	"github.com/xxxsen/common/utils"
-
-	"github.com/xxxsen/common/errs"
 )
 
 func init() {
@@ -34,7 +33,7 @@ func createPaddingLayer(param interface{}) (layer.ILayer, error) {
 		c.MaxBusiDataPerPacket = 16384
 	}
 	if c.PaddingMax < c.PaddingMin {
-		return nil, errs.New(errs.ErrParam, "padding max < padding min")
+		return nil, fmt.Errorf("padding max < padding min")
 	}
 	return &paddingLayer{c: c}, nil
 }

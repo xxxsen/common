@@ -8,8 +8,6 @@ import (
 	"sync"
 
 	"github.com/xxxsen/common/utils"
-
-	"github.com/xxxsen/common/errs"
 )
 
 var defaultPaddingTempBufSize = 2
@@ -65,11 +63,11 @@ func (p *Padding) Read(b []byte) (int, error) {
 	length := binary.BigEndian.Uint16(szbuf[:2])
 	rndLength := binary.BigEndian.Uint16(szbuf[2:])
 	if length == 0 {
-		return 0, errs.New(errs.ErrParam, "data length == 0")
+		return 0, fmt.Errorf("data length == 0")
 	}
 	if rndLength > 0 {
 		if _, err := p.bioRw.Discard(int(rndLength)); err != nil {
-			return 0, errs.Wrap(errs.ErrIO, "skip pandding data fail", err)
+			return 0, fmt.Errorf("skip pandding data failed, err:%w", err)
 		}
 	}
 	if len(b) > int(length) {
@@ -103,7 +101,7 @@ func (p *Padding) writeUint16WithBuffer(w io.Writer, v uint16, b []byte) error {
 
 func (p *Padding) circleWrite(data []byte, tempBuf []byte) error {
 	if len(data) == 0 {
-		return errs.New(errs.ErrParam, "write empty data")
+		return fmt.Errorf("write empty data")
 	}
 	//2字节长度+2字节填充长度+n字节填充+m字节数据流
 	var rnd []byte
@@ -111,21 +109,21 @@ func (p *Padding) circleWrite(data []byte, tempBuf []byte) error {
 		rnd = utils.RandBytes(int(p.min), int(p.max))
 	}
 	if err := p.writeUint16WithBuffer(p.bioRw, uint16(len(data)), tempBuf); err != nil {
-		return errs.Wrap(errs.ErrIO, "write total length fail", err)
+		return fmt.Errorf("write total length failed, err:%w", err)
 	}
 	if err := p.writeUint16WithBuffer(p.bioRw, uint16(len(rnd)), tempBuf); err != nil {
-		return errs.Wrap(errs.ErrIO, "write padding length fail", err)
+		return fmt.Errorf("write padding length failed, err:%w", err)
 	}
 	if len(rnd) != 0 {
 		if _, err := p.bioRw.Write(rnd); err != nil {
-			return errs.Wrap(errs.ErrIO, "write padding fail", err)
+			return fmt.Errorf("write padding failed, err:%w", err)
 		}
 	}
 	if _, err := p.bioRw.Write(data); err != nil {
-		return errs.Wrap(errs.ErrIO, "write raw data fail", err)
+		return fmt.Errorf("write raw data failed, err:%w", err)
 	}
 	if err := p.bioRw.Flush(); err != nil {
-		return errs.Wrap(errs.ErrIO, "flush write fail", err)
+		return fmt.Errorf("flush write failed, err:%w", err)
 	}
 	return nil
 }
@@ -141,7 +139,7 @@ func (p *Padding) Write(b []byte) (int, error) {
 		}
 		subData := b[l:r]
 		if err := p.circleWrite(subData, tempBuf); err != nil {
-			return 0, errs.Wrap(errs.ErrIO, fmt.Sprintf("partial write fail, total:%d, write at:%d", len(b), l), err)
+			return 0, fmt.Errorf("partial write fail, total:%d, write at:%d, err:%w", len(b), l, err)
 		}
 	}
 	return len(b), nil
@@ -150,16 +148,16 @@ func (p *Padding) Write(b []byte) (int, error) {
 func (p *Padding) Close() error {
 	var err error
 	if err = p.closer.Close(); err != nil {
-		err = errs.Wrap(errs.ErrIO, "close err", err)
+		err = fmt.Errorf("close err, err:%w", err)
 	}
 	if p.bioRw.Writer.Buffered() > 0 {
-		err = errs.Wrap(errs.ErrIO, fmt.Sprintf("write buffer not empty, sz:%d", p.bioRw.Writer.Buffered()), err)
+		err = fmt.Errorf("write buffer not empty, sz:%d, err:%w", p.bioRw.Writer.Buffered(), err)
 	}
 	if p.bioRw.Reader.Buffered() > 0 {
-		err = errs.Wrap(errs.ErrIO, "read buffer not empty", err)
+		err = fmt.Errorf("read buffer not empty, err:%w", err)
 	}
 	if p.spareSz > 0 {
-		err = errs.Wrap(errs.ErrIO, fmt.Sprintf("spare data in buf, sz:%d", p.spareSz), err)
+		err = fmt.Errorf("spare data in buf, sz:%d, err:%w", p.spareSz, err)
 	}
 	if err != nil {
 		return err

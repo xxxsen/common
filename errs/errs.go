@@ -42,6 +42,7 @@ func (e *Error) Message() string {
 	return e.msg
 }
 
+// Deprecated: should not use this
 func New(code int64, fmtter string, args ...interface{}) *Error {
 	return Wrap(
 		code,
@@ -50,6 +51,7 @@ func New(code int64, fmtter string, args ...interface{}) *Error {
 	)
 }
 
+// Deprecated: should not use this
 func Wrap(code int64, msg string, err error) *Error {
 	return &Error{
 		code: code,
@@ -58,11 +60,13 @@ func Wrap(code int64, msg string, err error) *Error {
 	}
 }
 
+// Deprecated: should not use this
 func (e *Error) WithDebugMsg(fmtter string, args ...interface{}) *Error {
 	e.extmsg = append(e.extmsg, fmt.Sprintf(fmtter, args...))
 	return e
 }
 
+// Deprecated: should not use this
 func IsErrOK(err error) bool {
 	ierr := FromError(err)
 	if ierr == nil {
@@ -74,6 +78,7 @@ func IsErrOK(err error) bool {
 	return false
 }
 
+// Deprecated: should not use this
 func FromError(err error) IError {
 	if err == nil {
 		return nil
