@@ -7,6 +7,7 @@ import (
 	lru "github.com/hnlq715/golang-lru"
 )
 
+// Deprecated: should not use this
 type LocalCache struct {
 	c *lru.Cache
 }

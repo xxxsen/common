@@ -27,6 +27,7 @@ func Run() error {
 	return defaultServer.Run()
 }
 
+// Deprecated: should not use this
 type Server struct {
 	c *config
 }

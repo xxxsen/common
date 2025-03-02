@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Deprecated: should not use this
 type EnvFlag struct {
 	fs *flag.FlagSet
 }

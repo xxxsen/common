@@ -9,6 +9,7 @@ var (
 	ErrOK = New(0, "success")
 )
 
+// Deprecated: should not use this
 type IError interface {
 	error
 	Code() int64

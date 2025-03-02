@@ -12,6 +12,7 @@ import (
 	"github.com/olivere/elastic/v7"
 )
 
+// Deprecated: should not use this
 var Client *EsClient
 
 func Init(opts ...Option) error {

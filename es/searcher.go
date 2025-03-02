@@ -6,6 +6,7 @@ import (
 	"github.com/olivere/elastic/v7"
 )
 
+// Deprecated: should not use this
 type ISearcher interface {
 	BuildQuery() *elastic.BoolQuery
 	BuildSorter() []elastic.Sorter
