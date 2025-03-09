@@ -5,6 +5,10 @@ import (
 	gen "github.com/yitter/idgenerator-go/idgen"
 )
 
+func init() {
+	_ = Init(1)
+}
+
 var defaultGenner IDGenerator
 
 func Default() IDGenerator {
