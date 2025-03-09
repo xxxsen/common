@@ -2,13 +2,22 @@ package bolt
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/xxxsen/common/database/kv"
 )
+
+type testSt struct {
+	A int    `json:"int"`
+	B bool   `json:"b"`
+	C string `json:"c"`
+}
 
 func TestGetSet(t *testing.T) {
 	file := filepath.Join(os.TempDir(), uuid.NewString())
@@ -65,4 +74,68 @@ func TestIter(t *testing.T) {
 		return true, nil
 	})
 	assert.NoError(t, err)
+}
+
+func TestTx(t *testing.T) {
+	file := filepath.Join(os.TempDir(), uuid.NewString())
+	defer os.RemoveAll(file)
+	tab := "tmp_tab"
+	db, err := New(file, tab)
+	assert.NoError(t, err)
+	defer db.Close()
+	ctx := context.Background()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		start := time.Now()
+		_, ok, err := db.Get(ctx, tab, "aaa")
+		assert.NoError(t, err)
+		assert.False(t, ok)
+		t.Logf("thread cost:%dms", time.Since(start).Milliseconds())
+	}()
+	err = db.OnTranscation(ctx, func(ctx context.Context, db kv.IKvQueryExecutor) error {
+		if err := db.Set(ctx, tab, "aaa", []byte("bbb")); err != nil {
+			return err
+		}
+		res, ok, err := db.Get(ctx, tab, "aaa")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("not found in transation")
+		}
+		assert.Equal(t, []byte("bbb"), res)
+		time.Sleep(500 * time.Millisecond)
+		return nil
+	})
+	{
+		res, ok, err := db.Get(ctx, tab, "aaa")
+		assert.NoError(t, err)
+		assert.True(t, ok)
+		assert.Equal(t, []byte("bbb"), res)
+	}
+	assert.NoError(t, err)
+}
+
+func TestKvGetSetObj(t *testing.T) {
+	st := &testSt{
+		A: 1,
+		B: true,
+		C: "test",
+	}
+	file := filepath.Join(os.TempDir(), uuid.NewString())
+	defer os.RemoveAll(file)
+	tab := "tmp_tab"
+	db, err := New(file, tab)
+	assert.NoError(t, err)
+	defer db.Close()
+	ctx := context.Background()
+	err = kv.MultiSetJsonObject(ctx, db, tab, map[string]*testSt{
+		"aaa": st,
+	})
+	assert.NoError(t, err)
+	m, err := kv.MultiGetJsonObject[testSt](ctx, db, tab, []string{"aaa"})
+	assert.NoError(t, err)
+	v, ok := m["aaa"]
+	assert.True(t, ok)
+	assert.Equal(t, st, v)
 }
