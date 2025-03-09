@@ -2,7 +2,6 @@ package idgen
 
 import (
 	"github.com/yitter/idgenerator-go/idgen"
-	gen "github.com/yitter/idgenerator-go/idgen"
 )
 
 func init() {
@@ -37,7 +36,7 @@ func (p *idgimpl) NextId() uint64 {
 }
 
 func New(wrkid uint16) IDGenerator {
-	opt := gen.NewIdGeneratorOptions(wrkid)
+	opt := idgen.NewIdGeneratorOptions(wrkid)
 	idg := idgen.NewDefaultIdGenerator(opt)
 	return &idgimpl{
 		gen: idg,
