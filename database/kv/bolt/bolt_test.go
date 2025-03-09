@@ -3,8 +3,10 @@ package bolt
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -138,4 +140,53 @@ func TestKvGetSetObj(t *testing.T) {
 	v, ok := m["aaa"]
 	assert.True(t, ok)
 	assert.Equal(t, st, v)
+}
+
+func BenchmarkGet(b *testing.B) {
+	file := filepath.Join(os.TempDir(), uuid.NewString())
+	defer os.RemoveAll(file)
+	tab := "tmp_tab"
+	db, err := New(file, tab)
+	if err != nil {
+		b.Fatalf("failed to create db: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	err = db.Set(ctx, tab, "hello", []byte("world"))
+	if err != nil {
+		b.Fatalf("failed to set value: %v", err)
+	}
+
+	b.ResetTimer()
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			_, _, err := db.Get(ctx, tab, "hello")
+			if err != nil {
+				b.Fatalf("failed to get value: %v", err)
+			}
+		}
+	})
+
+}
+
+func BenchmarkSet(b *testing.B) {
+	file := filepath.Join(os.TempDir(), uuid.NewString())
+	defer os.RemoveAll(file)
+	tab := "tmp_tab"
+	db, err := New(file, tab)
+	if err != nil {
+		b.Fatalf("failed to create db: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	b.ResetTimer()
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			err := db.Set(ctx, tab, strconv.FormatUint(rand.Uint64(), 10), []byte("value"))
+			if err != nil {
+				b.Fatalf("failed to set value: %v", err)
+			}
+		}
+	})
 }
