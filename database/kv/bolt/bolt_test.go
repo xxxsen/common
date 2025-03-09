@@ -142,6 +142,32 @@ func TestKvGetSetObj(t *testing.T) {
 	assert.Equal(t, st, v)
 }
 
+func TestSelectForUpdate(t *testing.T) {
+	st := &testSt{
+		A: 1,
+		B: true,
+		C: "test",
+	}
+	file := filepath.Join(os.TempDir(), uuid.NewString())
+	defer os.RemoveAll(file)
+	tab := "tmp_tab"
+	db, err := New(file, tab)
+	assert.NoError(t, err)
+	defer db.Close()
+	ctx := context.Background()
+	err = kv.SetJsonObject(ctx, db, tab, "aaa", st)
+	assert.NoError(t, err)
+	err = kv.OnGetJsonKeyForUpdate[testSt](ctx, db, tab, "aaa", func(ctx context.Context, key string, val *testSt) (*testSt, bool, error) {
+		val.C = "this is a test"
+		return val, true, nil
+	})
+	assert.NoError(t, err)
+	obj, ok, err := kv.GetJsonObject[testSt](ctx, db, tab, "aaa")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+	assert.Equal(t, "this is a test", obj.C)
+}
+
 func BenchmarkGet(b *testing.B) {
 	file := filepath.Join(os.TempDir(), uuid.NewString())
 	defer os.RemoveAll(file)

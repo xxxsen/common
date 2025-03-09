@@ -3,9 +3,11 @@ package kv
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 )
 
-type IterObjectFunc[T any] func(ctx context.Context, key string, val *T) (bool, error)
+type IterObjectFunc[T interface{}] func(ctx context.Context, key string, val *T) (bool, error)
+type OnGetKeyForUpdateFunc[T interface{}] func(ctx context.Context, key string, val *T) (*T, bool, error)
 
 func GetJsonObject[T interface{}](ctx context.Context, db IKvQueryExecutor, table string, key string) (*T, bool, error) {
 	raw, ok, err := db.Get(ctx, table, key)
@@ -58,12 +60,40 @@ func MultiSetJsonObject[T interface{}](ctx context.Context, db IKvQueryExecutor,
 	return db.MultiSet(ctx, table, ms)
 }
 
-func IterJsonObject[T any](ctx context.Context, db IKvQueryExecutor, table string, prefix string, cb IterObjectFunc[T]) {
-	db.Iter(ctx, table, prefix, func(ctx context.Context, key string, value []byte) (bool, error) {
+func IterJsonObject[T interface{}](ctx context.Context, db IKvQueryExecutor, table string, prefix string, cb IterObjectFunc[T]) error {
+	return db.Iter(ctx, table, prefix, func(ctx context.Context, key string, value []byte) (bool, error) {
 		v := new(T)
 		if err := json.Unmarshal(value, v); err != nil {
 			return false, err
 		}
 		return cb(ctx, key, v)
+	})
+}
+
+func OnGetJsonKeyForUpdate[T interface{}](ctx context.Context, db IKvDataBase, table string, key string, cb OnGetKeyForUpdateFunc[T]) error {
+	return db.OnTranscation(ctx, func(ctx context.Context, db IKvQueryExecutor) error {
+		res, ok, err := db.Get(ctx, table, key)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("not found")
+		}
+		v := new(T)
+		if err := json.Unmarshal(res, v); err != nil {
+			return err
+		}
+		newV, ok, err := cb(ctx, key, v)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return nil
+		}
+		res, err = json.Marshal(newV)
+		if err != nil {
+			return err
+		}
+		return db.Set(ctx, table, key, res)
 	})
 }
