@@ -174,7 +174,7 @@ func (b *badgerDB) MultiDel(ctx context.Context, table string, keys []string) er
 }
 
 func New(f string) (kv.IKvDataBase, error) {
-	db, err := badger.Open(badger.DefaultOptions(f).WithLogger(&loggerWrap{}).WithLoggingLevel(badger.WARNING))
+	db, err := badger.Open(badger.DefaultOptions(f).WithLoggingLevel(badger.ERROR))
 	if err != nil {
 		return nil, err
 	}
