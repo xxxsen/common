@@ -3,6 +3,7 @@ package badger
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/xxxsen/common/database/kv"
@@ -40,8 +41,8 @@ func (b *badgerDB) Get(ctx context.Context, table string, key string) ([]byte, b
 	return nil, false, nil
 }
 
-func (b *badgerDB) Set(ctx context.Context, table string, key string, value []byte) error {
-	return b.MultiSet(ctx, table, map[string][]byte{key: value})
+func (b *badgerDB) Set(ctx context.Context, table string, key string, value []byte, ttl time.Duration) error {
+	return b.MultiSet(ctx, table, map[string][]byte{key: value}, ttl)
 }
 
 func (b *badgerDB) Del(ctx context.Context, table string, key string) error {
@@ -91,20 +92,23 @@ func (b *badgerDB) buildKey(table string, k string) string {
 	return fmt.Sprintf("bk:%s:%s", table, k)
 }
 
-func (b *badgerDB) multiSet(ctx context.Context, txn *badger.Txn, table string, kvs map[string][]byte) error {
+func (b *badgerDB) multiSet(ctx context.Context, txn *badger.Txn, table string, kvs map[string][]byte, ttl time.Duration) error {
 	for k, v := range kvs {
 		key := b.buildKey(table, k)
-		err := txn.Set([]byte(key), v)
-		if err != nil {
+		entry := badger.NewEntry([]byte(key), []byte(v))
+		if ttl > 0 {
+			entry.WithTTL(ttl)
+		}
+		if err := txn.SetEntry(entry); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (b *badgerDB) MultiSet(ctx context.Context, table string, kvs map[string][]byte) error {
+func (b *badgerDB) MultiSet(ctx context.Context, table string, kvs map[string][]byte, ttl time.Duration) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		return b.multiSet(ctx, txn, table, kvs)
+		return b.multiSet(ctx, txn, table, kvs, ttl)
 	})
 	if err != nil {
 		return err
@@ -205,12 +209,12 @@ func (b *badgerQueryExecutor) Iter(ctx context.Context, table string, prefix str
 	return b.db.iter(ctx, b.tx, table, prefix, cb)
 }
 
-func (b *badgerQueryExecutor) Set(ctx context.Context, table string, key string, value []byte) error {
-	return b.MultiSet(ctx, table, map[string][]byte{key: value})
+func (b *badgerQueryExecutor) Set(ctx context.Context, table string, key string, value []byte, ttl time.Duration) error {
+	return b.MultiSet(ctx, table, map[string][]byte{key: value}, ttl)
 }
 
-func (b *badgerQueryExecutor) MultiSet(ctx context.Context, table string, kvs map[string][]byte) error {
-	return b.db.multiSet(ctx, b.tx, table, kvs)
+func (b *badgerQueryExecutor) MultiSet(ctx context.Context, table string, kvs map[string][]byte, ttl time.Duration) error {
+	return b.db.multiSet(ctx, b.tx, table, kvs, ttl)
 }
 
 func (b *badgerQueryExecutor) Del(ctx context.Context, table string, key string) error {

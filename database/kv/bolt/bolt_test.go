@@ -21,15 +21,22 @@ type testSt struct {
 	C string `json:"c"`
 }
 
+func dbfile() string {
+	dir := filepath.Join(os.TempDir(), "boltdb")
+	_ = os.MkdirAll(dir, 0755)
+	file := filepath.Join(dir, uuid.NewString())
+	return file
+}
+
 func TestGetSet(t *testing.T) {
-	file := filepath.Join(os.TempDir(), uuid.NewString())
+	file := dbfile()
 	defer os.RemoveAll(file)
 	tab := "tmp_tab"
 	db, err := New(file, tab)
 	assert.NoError(t, err)
 	defer db.Close()
 	ctx := context.Background()
-	err = db.Set(ctx, tab, "hello", []byte("world"))
+	err = db.Set(ctx, tab, "hello", []byte("world"), 0)
 	assert.NoError(t, err)
 	val, ok, err := db.Get(ctx, tab, "hello")
 	assert.NoError(t, err)
@@ -44,7 +51,7 @@ func TestGetSet(t *testing.T) {
 }
 
 func TestIter(t *testing.T) {
-	file := filepath.Join(os.TempDir(), uuid.NewString())
+	file := dbfile()
 	defer os.RemoveAll(file)
 	tab := "tmp_tab"
 	db, err := New(file, tab)
@@ -60,7 +67,7 @@ func TestIter(t *testing.T) {
 		"k-e": []byte("v-e"),
 		"k-f": []byte("v-f"),
 		"k-g": []byte("v-g"),
-	})
+	}, 0)
 	assert.NoError(t, err)
 	rs, err := db.MultiGet(ctx, tab, []string{"k-a", "k-b", "k-c", "k-d", "k-e", "k-f", "k-g"})
 	assert.NoError(t, err)
@@ -79,7 +86,7 @@ func TestIter(t *testing.T) {
 }
 
 func TestTx(t *testing.T) {
-	file := filepath.Join(os.TempDir(), uuid.NewString())
+	file := dbfile()
 	defer os.RemoveAll(file)
 	tab := "tmp_tab"
 	db, err := New(file, tab)
@@ -95,7 +102,7 @@ func TestTx(t *testing.T) {
 		t.Logf("thread cost:%dms", time.Since(start).Milliseconds())
 	}()
 	err = db.OnTranscation(ctx, func(ctx context.Context, db kv.IKvQueryExecutor) error {
-		if err := db.Set(ctx, tab, "aaa", []byte("bbb")); err != nil {
+		if err := db.Set(ctx, tab, "aaa", []byte("bbb"), 0); err != nil {
 			return err
 		}
 		res, ok, err := db.Get(ctx, tab, "aaa")
@@ -124,7 +131,7 @@ func TestKvGetSetObj(t *testing.T) {
 		B: true,
 		C: "test",
 	}
-	file := filepath.Join(os.TempDir(), uuid.NewString())
+	file := dbfile()
 	defer os.RemoveAll(file)
 	tab := "tmp_tab"
 	db, err := New(file, tab)
@@ -148,7 +155,7 @@ func TestSelectForUpdate(t *testing.T) {
 		B: true,
 		C: "test",
 	}
-	file := filepath.Join(os.TempDir(), uuid.NewString())
+	file := dbfile()
 	defer os.RemoveAll(file)
 	tab := "tmp_tab"
 	db, err := New(file, tab)
@@ -157,7 +164,7 @@ func TestSelectForUpdate(t *testing.T) {
 	ctx := context.Background()
 	err = kv.SetJsonObject(ctx, db, tab, "aaa", st)
 	assert.NoError(t, err)
-	err = kv.OnGetJsonKeyForUpdate[testSt](ctx, db, tab, "aaa", func(ctx context.Context, key string, val *testSt) (*testSt, bool, error) {
+	err = kv.OnGetJsonKeyForUpdate[testSt](ctx, db, tab, "aaa", 0, func(ctx context.Context, key string, val *testSt) (*testSt, bool, error) {
 		val.C = "this is a test"
 		return val, true, nil
 	})
@@ -169,7 +176,7 @@ func TestSelectForUpdate(t *testing.T) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	file := filepath.Join(os.TempDir(), uuid.NewString())
+	file := dbfile()
 	defer os.RemoveAll(file)
 	tab := "tmp_tab"
 	db, err := New(file, tab)
@@ -178,7 +185,7 @@ func BenchmarkGet(b *testing.B) {
 	}
 	defer db.Close()
 	ctx := context.Background()
-	err = db.Set(ctx, tab, "hello", []byte("world"))
+	err = db.Set(ctx, tab, "hello", []byte("world"), 0)
 	if err != nil {
 		b.Fatalf("failed to set value: %v", err)
 	}
@@ -196,7 +203,7 @@ func BenchmarkGet(b *testing.B) {
 }
 
 func BenchmarkSet(b *testing.B) {
-	file := filepath.Join(os.TempDir(), uuid.NewString())
+	file := dbfile()
 	defer os.RemoveAll(file)
 	tab := "tmp_tab"
 	db, err := New(file, tab)
@@ -209,7 +216,7 @@ func BenchmarkSet(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			err := db.Set(ctx, tab, strconv.FormatUint(rand.Uint64(), 10), []byte("value"))
+			err := db.Set(ctx, tab, strconv.FormatUint(rand.Uint64(), 10), []byte("value"), 0)
 			if err != nil {
 				b.Fatalf("failed to set value: %v", err)
 			}

@@ -3,6 +3,7 @@ package bolt
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/xxxsen/common/database/kv"
 	"go.etcd.io/bbolt"
@@ -55,8 +56,8 @@ func (db *boltDB) Get(ctx context.Context, table string, key string) ([]byte, bo
 	return nil, false, nil
 }
 
-func (db *boltDB) Set(ctx context.Context, table string, key string, value []byte) error {
-	return db.MultiSet(ctx, table, map[string][]byte{key: value})
+func (db *boltDB) Set(ctx context.Context, table string, key string, value []byte, ttl time.Duration) error {
+	return db.MultiSet(ctx, table, map[string][]byte{key: value}, ttl)
 }
 
 func (db *boltDB) iter(ctx context.Context, tx *bbolt.Tx, table string, prefix string, cb kv.IterFunc) error {
@@ -116,11 +117,12 @@ func (b *boltDB) MultiGet(ctx context.Context, table string, keys []string) (map
 	return m, nil
 }
 
-func (b *boltDB) multiSet(ctx context.Context, tx *bbolt.Tx, table string, kvs map[string][]byte) error {
+func (b *boltDB) multiSet(ctx context.Context, tx *bbolt.Tx, table string, kvs map[string][]byte, ttl time.Duration) error {
 	bk := tx.Bucket([]byte(table))
 	if bk == nil {
 		return errTableNotFound
 	}
+	//忽略ttl, bolt db并不支持
 	for k, v := range kvs {
 		if err := bk.Put([]byte(k), v); err != nil {
 			return err
@@ -129,9 +131,9 @@ func (b *boltDB) multiSet(ctx context.Context, tx *bbolt.Tx, table string, kvs m
 	return nil
 }
 
-func (b *boltDB) MultiSet(ctx context.Context, table string, kvs map[string][]byte) error {
+func (b *boltDB) MultiSet(ctx context.Context, table string, kvs map[string][]byte, ttl time.Duration) error {
 	if err := b.db.Update(func(tx *bbolt.Tx) error {
-		return b.multiSet(ctx, tx, table, kvs)
+		return b.multiSet(ctx, tx, table, kvs, ttl)
 	}); err != nil {
 		return err
 	}
@@ -204,12 +206,12 @@ func (b *boltQueryExecutor) Iter(ctx context.Context, table string, prefix strin
 	return b.db.iter(ctx, b.tx, table, prefix, cb)
 }
 
-func (b *boltQueryExecutor) Set(ctx context.Context, table string, key string, value []byte) error {
-	return b.MultiSet(ctx, table, map[string][]byte{key: value})
+func (b *boltQueryExecutor) Set(ctx context.Context, table string, key string, value []byte, ttl time.Duration) error {
+	return b.MultiSet(ctx, table, map[string][]byte{key: value}, ttl)
 }
 
-func (b *boltQueryExecutor) MultiSet(ctx context.Context, table string, kvs map[string][]byte) error {
-	return b.db.multiSet(ctx, b.tx, table, kvs)
+func (b *boltQueryExecutor) MultiSet(ctx context.Context, table string, kvs map[string][]byte, ttl time.Duration) error {
+	return b.db.multiSet(ctx, b.tx, table, kvs, ttl)
 }
 
 func (b *boltQueryExecutor) Del(ctx context.Context, table string, key string) error {

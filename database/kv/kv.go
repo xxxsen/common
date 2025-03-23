@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"io"
+	"time"
 )
 
 type IKvQueryer interface {
@@ -12,8 +13,8 @@ type IKvQueryer interface {
 }
 
 type IKvExecutor interface {
-	Set(ctx context.Context, table string, key string, value []byte) error
-	MultiSet(ctx context.Context, table string, kvs map[string][]byte) error
+	Set(ctx context.Context, table string, key string, value []byte, ttl time.Duration) error
+	MultiSet(ctx context.Context, table string, kvs map[string][]byte, ttl time.Duration) error
 	Del(ctx context.Context, table string, key string) error
 	MultiDel(ctx context.Context, table string, keys []string) error
 }

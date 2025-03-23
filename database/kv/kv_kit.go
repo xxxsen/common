@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 type IterObjectFunc[T interface{}] func(ctx context.Context, key string, val *T) (bool, error)
@@ -38,17 +39,25 @@ func MultiGetJsonObject[T interface{}](ctx context.Context, db IKvQueryExecutor,
 }
 
 func SetJsonObject(ctx context.Context, db IKvQueryExecutor, table string, key string, val interface{}) error {
+	return SetJsonObjectWithTTL(ctx, db, table, key, val, 0)
+}
+
+func SetJsonObjectWithTTL(ctx context.Context, db IKvQueryExecutor, table string, key string, val interface{}, ttl time.Duration) error {
 	raw, err := json.Marshal(val)
 	if err != nil {
 		return err
 	}
-	if err := db.Set(ctx, table, key, raw); err != nil {
+	if err := db.Set(ctx, table, key, raw, ttl); err != nil {
 		return err
 	}
 	return nil
 }
 
 func MultiSetJsonObject[T interface{}](ctx context.Context, db IKvQueryExecutor, table string, m map[string]*T) error {
+	return MultiSetJsonObjectWithTTL[T](ctx, db, table, m, 0)
+}
+
+func MultiSetJsonObjectWithTTL[T interface{}](ctx context.Context, db IKvQueryExecutor, table string, m map[string]*T, ttl time.Duration) error {
 	ms := make(map[string][]byte, len(m))
 	for k, v := range m {
 		raw, err := json.Marshal(v)
@@ -57,7 +66,7 @@ func MultiSetJsonObject[T interface{}](ctx context.Context, db IKvQueryExecutor,
 		}
 		ms[k] = raw
 	}
-	return db.MultiSet(ctx, table, ms)
+	return db.MultiSet(ctx, table, ms, ttl)
 }
 
 func IterJsonObject[T interface{}](ctx context.Context, db IKvQueryExecutor, table string, prefix string, cb IterObjectFunc[T]) error {
@@ -70,7 +79,7 @@ func IterJsonObject[T interface{}](ctx context.Context, db IKvQueryExecutor, tab
 	})
 }
 
-func OnGetJsonKeyForUpdate[T interface{}](ctx context.Context, db IKvDataBase, table string, key string, cb OnGetKeyForUpdateFunc[T]) error {
+func OnGetJsonKeyForUpdate[T interface{}](ctx context.Context, db IKvDataBase, table string, key string, ttl time.Duration, cb OnGetKeyForUpdateFunc[T]) error {
 	return db.OnTranscation(ctx, func(ctx context.Context, db IKvQueryExecutor) error {
 		res, ok, err := db.Get(ctx, table, key)
 		if err != nil {
@@ -94,6 +103,6 @@ func OnGetJsonKeyForUpdate[T interface{}](ctx context.Context, db IKvDataBase, t
 		if err != nil {
 			return err
 		}
-		return db.Set(ctx, table, key, res)
+		return db.Set(ctx, table, key, res, ttl)
 	})
 }
