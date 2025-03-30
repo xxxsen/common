@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	_ "github.com/glebarez/go-sqlite"
 	"github.com/xxxsen/common/database"
@@ -46,6 +47,9 @@ func New(f string, fns ...OnDBCreateSuccFunc) (database.IDatabase, error) {
 	if err != nil {
 		return nil, err
 	}
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(time.Hour)
 	w := &sqliteDBWrap{
 		db: db,
 	}
