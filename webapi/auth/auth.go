@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UserQueryFunc 虽然更好的做法是传入ak/sk验证结果, 但是s3的那个接口又不好弄, mdzz...
 type UserQueryFunc func(ctx context.Context, ak string) (string, bool, error)
 
 func MapUserMatch(ud map[string]string) UserQueryFunc {

@@ -9,9 +9,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func TryAuthMiddleware(users map[string]string) gin.HandlerFunc {
-	matchfn := auth.MapUserMatch(users)
-	return tryAuthMiddleware(matchfn, auth.AuthList()...)
+func TryAuthMiddleware(fn auth.UserQueryFunc) gin.HandlerFunc {
+	return tryAuthMiddleware(fn, auth.AuthList()...)
 }
 
 func tryAuthMiddleware(matchfn auth.UserQueryFunc, ats ...auth.IAuth) gin.HandlerFunc {
