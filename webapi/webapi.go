@@ -29,7 +29,20 @@ func nonRegister(c *gin.RouterGroup) {
 
 }
 
-func RunEngine(root string, addr string, opts ...Option) error {
+type IWebEngine interface {
+	Run() error
+}
+
+type webEngine struct {
+	bind   string
+	engine *gin.Engine
+}
+
+func (w *webEngine) Run() error {
+	return w.engine.Run(w.bind)
+}
+
+func NewEngine(root string, addr string, opts ...Option) (IWebEngine, error) {
 	c := &config{
 		userQuery: nonUserQuery,
 		regFn:     nonRegister,
@@ -45,9 +58,12 @@ func RunEngine(root string, addr string, opts ...Option) error {
 	engine := gin.New()
 	engine.Use(middlewares...)
 	gp := &engine.RouterGroup
-	if len(root) > 0 {
+	if len(root) > 0 && root != "/" {
 		gp = gp.Group(root)
 	}
 	c.regFn(gp)
-	return engine.Run(addr)
+	return &webEngine{
+		bind:   addr,
+		engine: engine,
+	}, nil
 }
