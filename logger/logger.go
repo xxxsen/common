@@ -31,7 +31,7 @@ func stringToLevel(lv string) zapcore.Level {
 }
 
 func Init(file string, lv string, maxRotate int, maxSize int, maxKeepDays int, withConsole bool) *zap.Logger {
-	if len(lv) == 0 {
+	if len(lv) == 0 || len(file) == 0 {
 		lv = "debug"
 		withConsole = true
 	}
