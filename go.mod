@@ -1,12 +1,10 @@
 module github.com/xxxsen/common
 
 go 1.23.0
-
 toolchain go1.24.1
 
 require (
 	github.com/aws/aws-sdk-go v1.44.96
-	github.com/hnlq715/golang-lru v0.3.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/yitter/idgenerator-go v1.3.1
 	go.uber.org/zap v1.23.0
@@ -57,7 +55,7 @@ require (
 require (
 	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
-	github.com/cloudflare/circl v1.3.7 // indirect
+	github.com/cloudflare/circl v1.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/badger/v4 v4.6.0
 	github.com/didi/gendry v1.8.2
@@ -70,7 +68,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/refraction-networking/utls v1.6.4
+	github.com/refraction-networking/utls v1.7.0
 	github.com/stretchr/testify v1.10.0
 	github.com/xxxsen/s3verify v0.0.5
 	go.etcd.io/bbolt v1.4.0
