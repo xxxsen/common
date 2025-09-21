@@ -3,6 +3,7 @@ package webapi
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xxxsen/common/webapi/middleware"
@@ -30,6 +31,7 @@ func nonRegister(c *gin.RouterGroup) {
 }
 
 type IWebEngine interface {
+	http.Handler
 	Run() error
 }
 
@@ -40,6 +42,10 @@ type webEngine struct {
 
 func (w *webEngine) Run() error {
 	return w.engine.Run(w.bind)
+}
+
+func (w *webEngine) ServeHTTP(wr http.ResponseWriter, r *http.Request) {
+	w.engine.ServeHTTP(wr, r)
 }
 
 func NewEngine(root string, addr string, opts ...Option) (IWebEngine, error) {
