@@ -7,6 +7,10 @@ import (
 	"sync"
 )
 
+type IChecker interface {
+	Check(ip string) (bool, error)
+}
+
 // Checker stores IP addresses and CIDR prefixes for membership checks.
 type Checker struct {
 	mu       sync.RWMutex
