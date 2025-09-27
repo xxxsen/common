@@ -4,16 +4,36 @@ import (
 	"fmt"
 	"net/netip"
 	"strings"
-	"sync"
 )
 
 type IChecker interface {
 	Check(ip string) (bool, error)
 }
 
+func New() *Checker {
+	return &Checker{
+		ips: make(map[netip.Addr]struct{}),
+	}
+}
+
+func TrueChecker() IChecker {
+	return defaultCk{v: true}
+}
+
+func FalseChecker() IChecker {
+	return defaultCk{v: false}
+}
+
+type defaultCk struct {
+	v bool
+}
+
+func (c defaultCk) Check(ip string) (bool, error) {
+	return c.v, nil
+}
+
 // Checker stores IP addresses and CIDR prefixes for membership checks.
 type Checker struct {
-	mu       sync.RWMutex
 	ips      map[netip.Addr]struct{}
 	prefixes []netip.Prefix
 }
@@ -38,7 +58,7 @@ func (c *Checker) AddList(lst ...string) error {
 			return fmt.Errorf("add entry:%s failed, err:%w", item, err)
 		}
 	}
-	return nil 
+	return nil
 }
 
 func (c *Checker) addAddr(input string) error {
@@ -46,9 +66,6 @@ func (c *Checker) addAddr(input string) error {
 	if err != nil {
 		return fmt.Errorf("ipcheck: invalid IP %q: %w", input, err)
 	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	if c.ips == nil {
 		c.ips = make(map[netip.Addr]struct{})
@@ -66,9 +83,6 @@ func (c *Checker) addPrefix(input string) error {
 		return fmt.Errorf("ipcheck: invalid CIDR %q", input)
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	c.prefixes = append(c.prefixes, prefix.Masked())
 	return nil
 }
@@ -80,9 +94,6 @@ func (c *Checker) Check(ip string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("ipcheck: invalid IP %q: %w", ip, err)
 	}
-
-	c.mu.RLock()
-	defer c.mu.RUnlock()
 
 	if _, ok := c.ips[addr]; ok {
 		return true, nil
