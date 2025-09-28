@@ -55,21 +55,15 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.2.0 // indirect
-	github.com/andybalholm/brotli v1.0.6 // indirect
-	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/badger/v4 v4.6.0
 	github.com/didi/gendry v1.8.2
 	github.com/gin-gonic/gin v1.10.0
 	github.com/glebarez/go-sqlite v1.22.0
-	github.com/gobwas/httphead v0.1.0 // indirect
-	github.com/gobwas/pool v0.2.1 // indirect
-	github.com/gobwas/ws v1.3.2
 	github.com/google/uuid v1.6.0
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/refraction-networking/utls v1.7.0
 	github.com/stretchr/testify v1.10.0
 	github.com/xxxsen/s3verify v0.0.5
 	go.etcd.io/bbolt v1.4.0
