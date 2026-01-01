@@ -10,6 +10,14 @@ import (
 	"go.uber.org/zap"
 )
 
+func readClientIP(c *gin.Context) string {
+	//自己的工程都是都是内网访问, 直接从x-real-ip拿吧, 不折腾...
+	if ip := c.GetHeader("X-Real-IP"); len(ip) > 0 {
+		return ip
+	}
+	return c.ClientIP()
+}
+
 func LogRequestMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		start := time.Now()
@@ -17,7 +25,7 @@ func LogRequestMiddleware() gin.HandlerFunc {
 		logutil.GetLogger(ctx.Request.Context()).
 			With(zap.String("method", ctx.Request.Method),
 				zap.String("path", ctx.Request.URL.Path),
-				zap.String("ip", ctx.ClientIP()),
+				zap.String("ip", readClientIP(ctx)),
 				zap.Int("body_size", int(ctx.Request.ContentLength)),
 				zap.String("refer", ctx.Request.Referer()),
 				zap.String("user_agent", ctx.Request.UserAgent()),
