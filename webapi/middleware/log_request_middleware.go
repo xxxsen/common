@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"net"
 	"time"
 
 	"github.com/xxxsen/common/webapi/proxyutil"
@@ -12,8 +13,11 @@ import (
 
 func readClientIP(c *gin.Context) string {
 	//自己的工程都是都是内网访问, 直接从x-real-ip拿吧, 不折腾...
-	if ip := c.GetHeader("X-Real-IP"); len(ip) > 0 {
-		return ip
+	ip := net.ParseIP(c.RemoteIP())
+	if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		if rip := c.GetHeader("X-Real-IP"); len(rip) > 0 {
+			return rip
+		}
 	}
 	return c.ClientIP()
 }
