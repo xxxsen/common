@@ -2,8 +2,9 @@ package bolt
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
-	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -45,7 +46,7 @@ func TestGetSet(t *testing.T) {
 	_, ok, err = db.Get(ctx, tab, "test_not_found")
 	assert.NoError(t, err)
 	assert.False(t, ok)
-	//bucket not found
+	// Bucket not found.
 	_, _, err = db.Get(ctx, "test", "111")
 	assert.Error(t, err)
 }
@@ -110,7 +111,7 @@ func TestTx(t *testing.T) {
 			return err
 		}
 		if !ok {
-			return fmt.Errorf("not found in transation")
+			return fmt.Errorf("not found in transaction")
 		}
 		assert.Equal(t, []byte("bbb"), res)
 		time.Sleep(500 * time.Millisecond)
@@ -199,7 +200,6 @@ func BenchmarkGet(b *testing.B) {
 			}
 		}
 	})
-
 }
 
 func BenchmarkSet(b *testing.B) {
@@ -215,8 +215,13 @@ func BenchmarkSet(b *testing.B) {
 
 	b.ResetTimer()
 	b.RunParallel(func(p *testing.PB) {
+		var random [8]byte
 		for p.Next() {
-			err := db.Set(ctx, tab, strconv.FormatUint(rand.Uint64(), 10), []byte("value"), 0)
+			if _, err := rand.Read(random[:]); err != nil {
+				b.Fatalf("generate key: %v", err)
+			}
+			key := strconv.FormatUint(binary.BigEndian.Uint64(random[:]), 10)
+			err := db.Set(ctx, tab, key, []byte("value"), 0)
 			if err != nil {
 				b.Fatalf("failed to set value: %v", err)
 			}

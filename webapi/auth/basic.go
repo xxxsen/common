@@ -1,36 +1,36 @@
 package auth
 
 import (
-	"fmt"
-	"strings"
+	"crypto/hmac"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	BasicAuthName = "basic"
+const BasicAuthName = "basic"
+
+var (
+	errBasicCredentialsMissing = errors.New("basic credentials are missing")
+	errBasicUserUnknown        = errors.New("basic user is unknown")
+	errBasicSecretMismatch     = errors.New("basic secret does not match")
 )
 
-func init() {
-	register(&basicAuth{})
+type basicAuth struct {
 }
 
-type basicAuth struct {
+// NewBasic returns an isolated Basic authenticator.
+func NewBasic() IAuth {
+	return &basicAuth{}
 }
 
 func (b *basicAuth) Name() string {
 	return BasicAuthName
 }
 
-func (b *basicAuth) IsMatchAuthType(ctx *gin.Context) bool {
-	auth := ctx.GetHeader("Authorization")
-	return strings.HasPrefix(auth, "Basic")
-}
-
 func (b *basicAuth) Auth(ctx *gin.Context, fn UserQueryFunc) (string, error) {
 	uak, usk, ok := ctx.Request.BasicAuth()
 	if !ok {
-		return "", fmt.Errorf("no auth found")
+		return "", errBasicCredentialsMissing
 	}
 
 	sk, ok, err := fn(ctx, uak)
@@ -38,10 +38,10 @@ func (b *basicAuth) Auth(ctx *gin.Context, fn UserQueryFunc) (string, error) {
 		return "", err
 	}
 	if !ok {
-		return "", fmt.Errorf("user not found, u:%s", uak)
+		return "", errBasicUserUnknown
 	}
-	if sk != usk {
-		return "", fmt.Errorf("sk not match, carry:%s", usk)
+	if !hmac.Equal([]byte(sk), []byte(usk)) {
+		return "", errBasicSecretMismatch
 	}
 	return uak, nil
 }

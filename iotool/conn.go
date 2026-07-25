@@ -1,7 +1,6 @@
 package iotool
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"time"
@@ -10,7 +9,7 @@ import (
 type setDeadLineFunc func(t time.Time) error
 
 func defaultSetDeadline(t time.Time) error {
-	return fmt.Errorf("not impl")
+	return errDeadlineUnsupported
 }
 
 var defaultNoAddr = newNetAddrWithString("unknown", "no addr")
@@ -62,14 +61,39 @@ func WrapConnToIOConn(basic net.Conn, r io.Reader, w io.Writer, c io.Closer) *IO
 }
 
 func WrapReadWriteCloserToIOConn(rwc io.ReadWriteCloser) *IOConn {
-	return newIOConn(rwc, rwc, rwc, defaultNoAddr, defaultNoAddr, defaultSetDeadline, defaultSetDeadline, defaultSetDeadline)
+	return newIOConn(
+		rwc,
+		rwc,
+		rwc,
+		defaultNoAddr,
+		defaultNoAddr,
+		defaultSetDeadline,
+		defaultSetDeadline,
+		defaultSetDeadline,
+	)
 }
 
 func NewIOConn(base net.Conn) *IOConn {
-	return newIOConn(base, base, base, base.LocalAddr(), base.RemoteAddr(), base.SetDeadline, base.SetReadDeadline, base.SetWriteDeadline)
+	return newIOConn(
+		base,
+		base,
+		base,
+		base.LocalAddr(),
+		base.RemoteAddr(),
+		base.SetDeadline,
+		base.SetReadDeadline,
+		base.SetWriteDeadline,
+	)
 }
 
-func newIOConn(r io.Reader, w io.Writer, c io.Closer, laddr net.Addr, raddr net.Addr, sd, srd, swd setDeadLineFunc) *IOConn {
+func newIOConn(
+	r io.Reader,
+	w io.Writer,
+	c io.Closer,
+	laddr net.Addr,
+	raddr net.Addr,
+	sd, srd, swd setDeadLineFunc,
+) *IOConn {
 	return &IOConn{
 		r:                r,
 		w:                w,
@@ -115,16 +139,16 @@ func (c *IOConn) ReplaceRemoteAddrWithString(network string, addr string) *IOCon
 	return c.ReplaceRemoteAddr(newNetAddrWithString(network, addr))
 }
 
-func (c *IOConn) Read(b []byte) (n int, err error) {
-	return c.r.Read(b)
+func (c *IOConn) Read(b []byte) (int, error) {
+	return wrapReadResult(c.r.Read(b))
 }
 
-func (c *IOConn) Write(b []byte) (n int, err error) {
-	return c.w.Write(b)
+func (c *IOConn) Write(b []byte) (int, error) {
+	return wrapWriteResult(c.w.Write(b))
 }
 
 func (c *IOConn) Close() error {
-	return c.c.Close()
+	return wrapCloseError(c.c.Close())
 }
 
 func (c *IOConn) LocalAddr() net.Addr {

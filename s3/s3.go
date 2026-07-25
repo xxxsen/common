@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -17,6 +18,11 @@ import (
 )
 
 var Client *S3Client
+
+var (
+	errBucketRequired    = errors.New("S3 bucket is required")
+	errPartCountMismatch = errors.New("S3 multipart part count does not match")
+)
 
 type S3Client struct {
 	c      *config
@@ -52,7 +58,7 @@ func New(opts ...Option) (*S3Client, error) {
 		opt(c)
 	}
 	if len(c.bucket) == 0 {
-		return nil, fmt.Errorf("nil bucket name")
+		return nil, errBucketRequired
 	}
 
 	credit := credentials.NewStaticCredentials(c.secretId, c.secretKey, "")
@@ -79,7 +85,7 @@ func (c *S3Client) DownloadByRange(ctx context.Context, fileid string, at int64)
 	if at != 0 {
 		input.Range = aws.String(fmt.Sprintf("%d-", at))
 	}
-	output, err := c.client.GetObject(input)
+	output, err := c.client.GetObjectWithContext(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("get object failed, err:%w", err)
 	}
@@ -90,16 +96,23 @@ func (c *S3Client) Download(ctx context.Context, fileid string) (io.ReadCloser, 
 	return c.DownloadByRange(ctx, fileid, 0)
 }
 
-func (c *S3Client) Upload(ctx context.Context, fileid string, r io.ReadSeeker, sz int64, cks ...string) (string, error) {
+func (c *S3Client) Upload(
+	ctx context.Context,
+	fileid string,
+	r io.ReadSeeker,
+	sz int64,
+	cks ...string,
+) (string, error) {
 	input := &s3.PutObjectInput{
-		Body:   r,
-		Bucket: aws.String(c.c.bucket),
-		Key:    aws.String(fileid),
+		Body:          r,
+		Bucket:        aws.String(c.c.bucket),
+		ContentLength: aws.Int64(sz),
+		Key:           aws.String(fileid),
 	}
 	if len(cks) > 0 && len(cks[0]) > 0 {
 		input.ContentMD5 = toBase64MD5CheckSum(cks[0])
 	}
-	rsp, err := c.client.PutObject(input)
+	rsp, err := c.client.PutObjectWithContext(ctx, input)
 	if err != nil {
 		return "", fmt.Errorf("put object failed, err:%w", err)
 	}
@@ -107,7 +120,7 @@ func (c *S3Client) Upload(ctx context.Context, fileid string, r io.ReadSeeker, s
 }
 
 func (c *S3Client) Remove(ctx context.Context, fileid string) error {
-	_, err := c.client.DeleteObject(&s3.DeleteObjectInput{
+	_, err := c.client.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(c.c.bucket),
 		Key:    aws.String(fileid),
 	})
@@ -118,7 +131,7 @@ func (c *S3Client) Remove(ctx context.Context, fileid string) error {
 }
 
 func (c *S3Client) BeginUpload(ctx context.Context, fileid string) (string, error) {
-	output, err := c.client.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
+	output, err := c.client.CreateMultipartUploadWithContext(ctx, &s3.CreateMultipartUploadInput{
 		Bucket: aws.String(c.c.bucket),
 		Key:    aws.String(fileid),
 	})
@@ -128,7 +141,14 @@ func (c *S3Client) BeginUpload(ctx context.Context, fileid string) (string, erro
 	return *output.UploadId, nil
 }
 
-func (c *S3Client) UploadPart(ctx context.Context, fileid string, uploadid string, partid int, file io.ReadSeeker, cks ...string) error {
+func (c *S3Client) UploadPart(
+	ctx context.Context,
+	fileid string,
+	uploadid string,
+	partid int,
+	file io.ReadSeeker,
+	cks ...string,
+) error {
 	input := &s3.UploadPartInput{
 		Body:       file,
 		Bucket:     aws.String(c.c.bucket),
@@ -139,15 +159,19 @@ func (c *S3Client) UploadPart(ctx context.Context, fileid string, uploadid strin
 	if len(cks) > 0 {
 		input.ContentMD5 = toBase64MD5CheckSum(cks[0])
 	}
-	_, err := c.client.UploadPart(input)
+	_, err := c.client.UploadPartWithContext(ctx, input)
 	if err != nil {
 		return fmt.Errorf("put part failed, err:%w", err)
 	}
 	return nil
 }
 
-func (c *S3Client) listParts(ctx context.Context, fileid string, uploadid string) ([]*s3.Part, error) {
-	output, err := c.client.ListParts(&s3.ListPartsInput{
+func (c *S3Client) listParts(
+	ctx context.Context,
+	fileid string,
+	uploadid string,
+) ([]*s3.Part, error) {
+	output, err := c.client.ListPartsWithContext(ctx, &s3.ListPartsInput{
 		Bucket:              aws.String(c.c.bucket),
 		ExpectedBucketOwner: new(string),
 		Key:                 aws.String(fileid),
@@ -174,30 +198,47 @@ func (c *S3Client) parts2completeparts(src []*s3.Part) []*s3.CompletedPart {
 	return out
 }
 
-func (c *S3Client) EndUpload(ctx context.Context, fileid string, uploadid string, partcount int) (string, error) {
+func (c *S3Client) EndUpload(
+	ctx context.Context,
+	fileid string,
+	uploadid string,
+	partcount int,
+) (string, error) {
 	parts, err := c.listParts(ctx, fileid, uploadid)
 	if err != nil {
 		return "", err
 	}
 	if len(parts) != partcount {
-		return "", fmt.Errorf("part count not match, need:%d, get:%d", partcount, len(parts))
+		return "", fmt.Errorf(
+			"%w: expected=%d actual=%d",
+			errPartCountMismatch,
+			partcount,
+			len(parts),
+		)
 	}
-	rsp, err := c.client.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
-		Bucket: aws.String(c.c.bucket),
-		Key:    aws.String(fileid),
-		MultipartUpload: &s3.CompletedMultipartUpload{
-			Parts: c.parts2completeparts(parts),
+	rsp, err := c.client.CompleteMultipartUploadWithContext(
+		ctx,
+		&s3.CompleteMultipartUploadInput{
+			Bucket: aws.String(c.c.bucket),
+			Key:    aws.String(fileid),
+			MultipartUpload: &s3.CompletedMultipartUpload{
+				Parts: c.parts2completeparts(parts),
+			},
+			UploadId: aws.String(uploadid),
 		},
-		UploadId: aws.String(uploadid),
-	})
+	)
 	if err != nil {
 		return "", fmt.Errorf("finish upload failed, err:%w", err)
 	}
 	return c.unquote(*rsp.ETag), nil
 }
 
-func (c *S3Client) DiscardMultiPartUpload(ctx context.Context, fileid string, uploadid string) error {
-	_, err := c.client.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
+func (c *S3Client) DiscardMultiPartUpload(
+	ctx context.Context,
+	fileid string,
+	uploadid string,
+) error {
+	_, err := c.client.AbortMultipartUploadWithContext(ctx, &s3.AbortMultipartUploadInput{
 		Bucket:   aws.String(c.c.bucket),
 		Key:      aws.String(fileid),
 		UploadId: aws.String(uploadid),
@@ -213,7 +254,7 @@ type ObjectMetaInfo struct {
 }
 
 func (c *S3Client) GetFileInfo(ctx context.Context, fileid string) (*ObjectMetaInfo, error) {
-	out, err := c.client.HeadObject(&s3.HeadObjectInput{
+	out, err := c.client.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(c.c.bucket),
 		Key:    aws.String(fileid),
 	})

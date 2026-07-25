@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 )
 
 const (
@@ -46,21 +47,21 @@ func (r *reader) readFromSpare(b []byte) (int, error) {
 func (r *reader) decodeFrame() error {
 	tmp, err := r.r.Peek(2)
 	if err != nil {
-		return err
+		return wrapCryptoReadError("peek encrypted frame", err)
 	}
 	length := binary.BigEndian.Uint16(tmp)
 	if int(length) > defaultMaxFrameSizeToRead {
-		return fmt.Errorf("frame too big, size:%d", length)
+		return fmt.Errorf("%w: %d", errFrameTooLarge, length)
 	}
 	_, _ = r.r.Discard(2)
 	frame := make([]byte, length)
 	_, err = io.ReadAtLeast(r.r, frame, int(length))
 	if err != nil {
-		return err
+		return wrapCryptoReadError("read encrypted frame", err)
 	}
 	buf, err := r.cc.Decrypt(frame, r.key)
 	if err != nil {
-		return err
+		return fmt.Errorf("decrypt frame: %w", err)
 	}
 	r.spare = buf
 	return nil
@@ -85,7 +86,7 @@ func (w *writer) Write(data []byte) (int, error) {
 		return 0, err
 	}
 	if err := w.w.Flush(); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("flush encrypted stream: %w", err)
 	}
 	return len(data), nil
 }
@@ -100,15 +101,25 @@ func (w *writer) circleWriteFrame(b []byte) error {
 		buf := b[i:end]
 		data, err := w.cc.Encrypt(buf, w.key)
 		if err != nil {
-			return err
+			return fmt.Errorf("encrypt frame: %w", err)
 		}
-		binary.BigEndian.PutUint16(length, uint16(len(data)))
+		if len(data) > math.MaxUint16 {
+			return fmt.Errorf("%w: %d", errFrameTooLarge, len(data))
+		}
+		binary.BigEndian.PutUint16(length, frameLength(len(data)))
 		if _, err := w.w.Write(length); err != nil {
-			return err
+			return fmt.Errorf("write frame length: %w", err)
 		}
 		if _, err := w.w.Write(data); err != nil {
-			return err
+			return fmt.Errorf("write encrypted frame: %w", err)
 		}
 	}
 	return nil
+}
+
+func frameLength(length int) uint16 {
+	if length < 0 || length > math.MaxUint16 {
+		panic(errFrameTooLarge)
+	}
+	return uint16(length)
 }

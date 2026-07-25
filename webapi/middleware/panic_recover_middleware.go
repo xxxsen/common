@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"runtime/debug"
 
@@ -12,12 +12,19 @@ import (
 	"go.uber.org/zap"
 )
 
+var errServicePanic = errors.New("service panic")
+
 func PanicRecoverMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
-				logutil.GetLogger(ctx).Error("service panic", zap.Any("panic", err), zap.String("path", ctx.Request.URL.Path), zap.String("stack", string(debug.Stack())))
-				proxyutil.FailJson(ctx, http.StatusInternalServerError, fmt.Errorf("service panic"))
+				logutil.GetLogger(ctx).Error(
+					"service panic",
+					zap.Any("panic", err),
+					zap.String("path", ctx.Request.URL.Path),
+					zap.String("stack", string(debug.Stack())),
+				)
+				proxyutil.FailJson(ctx, http.StatusInternalServerError, errServicePanic)
 			}
 		}()
 		ctx.Next()

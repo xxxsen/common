@@ -2,6 +2,7 @@ package badger
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -21,13 +22,19 @@ func (b *badgerDB) OnTranscation(ctx context.Context, cb kv.KvTranscationFunc) e
 		tx: tx,
 	}
 	if err := cb(ctx, qe); err != nil {
-		return err
+		return fmt.Errorf("run transaction callback: %w", err)
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit badger transaction: %w", err)
+	}
+	return nil
 }
 
 func (b *badgerDB) Close() error {
-	return b.db.Close()
+	if err := b.db.Close(); err != nil {
+		return fmt.Errorf("close badger database: %w", err)
+	}
+	return nil
 }
 
 func (b *badgerDB) Get(ctx context.Context, table string, key string) ([]byte, bool, error) {
@@ -54,15 +61,24 @@ func (b *badgerDB) copyBytes(dst *[]byte, src []byte) {
 	copy(*dst, src)
 }
 
-func (b *badgerDB) multiGet(ctx context.Context, txn *badger.Txn, table string, keys []string, rs map[string][]byte) error {
+func (b *badgerDB) multiGet(
+	ctx context.Context,
+	txn *badger.Txn,
+	table string,
+	keys []string,
+	rs map[string][]byte,
+) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("get context: %w", err)
+	}
 	for _, k := range keys {
 		key := b.buildKey(table, k)
 		item, err := txn.Get([]byte(key))
 		if err != nil {
-			if err == badger.ErrKeyNotFound {
+			if errors.Is(err, badger.ErrKeyNotFound) {
 				continue
 			}
-			return err
+			return fmt.Errorf("get badger item: %w", err)
 		}
 		err = item.Value(func(val []byte) error {
 			var res []byte
@@ -71,7 +87,7 @@ func (b *badgerDB) multiGet(ctx context.Context, txn *badger.Txn, table string, 
 			return nil
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("read badger item value: %w", err)
 		}
 	}
 	return nil
@@ -83,7 +99,7 @@ func (b *badgerDB) MultiGet(ctx context.Context, table string, keys []string) (m
 		return b.multiGet(ctx, txn, table, keys, rs)
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("view badger values: %w", err)
 	}
 	return rs, nil
 }
@@ -92,15 +108,24 @@ func (b *badgerDB) buildKey(table string, k string) string {
 	return fmt.Sprintf("bk:%s:%s", table, k)
 }
 
-func (b *badgerDB) multiSet(ctx context.Context, txn *badger.Txn, table string, kvs map[string][]byte, ttl time.Duration) error {
+func (b *badgerDB) multiSet(
+	ctx context.Context,
+	txn *badger.Txn,
+	table string,
+	kvs map[string][]byte,
+	ttl time.Duration,
+) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("set context: %w", err)
+	}
 	for k, v := range kvs {
 		key := b.buildKey(table, k)
-		entry := badger.NewEntry([]byte(key), []byte(v))
+		entry := badger.NewEntry([]byte(key), v)
 		if ttl > 0 {
 			entry.WithTTL(ttl)
 		}
 		if err := txn.SetEntry(entry); err != nil {
-			return err
+			return fmt.Errorf("set badger item: %w", err)
 		}
 	}
 	return nil
@@ -111,12 +136,18 @@ func (b *badgerDB) MultiSet(ctx context.Context, table string, kvs map[string][]
 		return b.multiSet(ctx, txn, table, kvs, ttl)
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("update badger values: %w", err)
 	}
 	return nil
 }
 
-func (b *badgerDB) iter(ctx context.Context, txn *badger.Txn, table string, prefix string, cb kv.IterFunc) error {
+func (b *badgerDB) iter(
+	ctx context.Context,
+	txn *badger.Txn,
+	table string,
+	prefix string,
+	cb kv.IterFunc,
+) error {
 	prefixKey := b.buildKey(table, prefix)
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
@@ -129,11 +160,11 @@ func (b *badgerDB) iter(ctx context.Context, txn *badger.Txn, table string, pref
 			b.copyBytes(&res, val)
 			return nil
 		}); err != nil {
-			return err
+			return fmt.Errorf("read badger iterator value: %w", err)
 		}
 		next, err := cb(ctx, key, res)
 		if err != nil {
-			return err
+			return fmt.Errorf("run badger iterator callback: %w", err)
 		}
 		if !next {
 			break
@@ -147,17 +178,17 @@ func (b *badgerDB) Iter(ctx context.Context, table string, prefix string, cb kv.
 		return b.iter(ctx, txn, table, prefix, cb)
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("iterate badger values: %w", err)
 	}
 	return nil
 }
 
-func (b *badgerDB) multiDel(ctx context.Context, txn *badger.Txn, table string, keys []string) error {
+func (b *badgerDB) multiDel(txn *badger.Txn, table string, keys []string) error {
 	for _, k := range keys {
 		key := b.buildKey(table, k)
 		err := txn.Delete([]byte(key))
 		if err != nil {
-			return err
+			return fmt.Errorf("delete badger item: %w", err)
 		}
 	}
 	return nil
@@ -165,10 +196,13 @@ func (b *badgerDB) multiDel(ctx context.Context, txn *badger.Txn, table string, 
 
 func (b *badgerDB) MultiDel(ctx context.Context, table string, keys []string) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		return b.multiDel(ctx, txn, table, keys)
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("delete context: %w", err)
+		}
+		return b.multiDel(txn, table, keys)
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("delete badger values: %w", err)
 	}
 	return nil
 }
@@ -176,7 +210,7 @@ func (b *badgerDB) MultiDel(ctx context.Context, table string, keys []string) er
 func New(f string) (kv.IKvDataBase, error) {
 	db, err := badger.Open(badger.DefaultOptions(f).WithLoggingLevel(badger.ERROR))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open badger database: %w", err)
 	}
 	return &badgerDB{db: db}, nil
 }
@@ -197,10 +231,14 @@ func (b *badgerQueryExecutor) Get(ctx context.Context, table string, key string)
 	return nil, false, nil
 }
 
-func (b *badgerQueryExecutor) MultiGet(ctx context.Context, table string, keys []string) (map[string][]byte, error) {
+func (b *badgerQueryExecutor) MultiGet(
+	ctx context.Context,
+	table string,
+	keys []string,
+) (map[string][]byte, error) {
 	rs := make(map[string][]byte, len(keys))
 	if err := b.db.multiGet(ctx, b.tx, table, keys, rs); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get transaction values: %w", err)
 	}
 	return rs, nil
 }
@@ -209,11 +247,22 @@ func (b *badgerQueryExecutor) Iter(ctx context.Context, table string, prefix str
 	return b.db.iter(ctx, b.tx, table, prefix, cb)
 }
 
-func (b *badgerQueryExecutor) Set(ctx context.Context, table string, key string, value []byte, ttl time.Duration) error {
+func (b *badgerQueryExecutor) Set(
+	ctx context.Context,
+	table string,
+	key string,
+	value []byte,
+	ttl time.Duration,
+) error {
 	return b.MultiSet(ctx, table, map[string][]byte{key: value}, ttl)
 }
 
-func (b *badgerQueryExecutor) MultiSet(ctx context.Context, table string, kvs map[string][]byte, ttl time.Duration) error {
+func (b *badgerQueryExecutor) MultiSet(
+	ctx context.Context,
+	table string,
+	kvs map[string][]byte,
+	ttl time.Duration,
+) error {
 	return b.db.multiSet(ctx, b.tx, table, kvs, ttl)
 }
 
@@ -222,5 +271,8 @@ func (b *badgerQueryExecutor) Del(ctx context.Context, table string, key string)
 }
 
 func (b *badgerQueryExecutor) MultiDel(ctx context.Context, table string, keys []string) error {
-	return b.db.multiDel(ctx, b.tx, table, keys)
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("delete context: %w", err)
+	}
+	return b.db.multiDel(b.tx, table, keys)
 }

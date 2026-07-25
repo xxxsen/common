@@ -4,11 +4,7 @@ import (
 	"github.com/yitter/idgenerator-go/idgen"
 )
 
-func init() {
-	_ = Init(1)
-}
-
-var defaultGenner IDGenerator
+var defaultGenner IDGenerator = New(1)
 
 func Default() IDGenerator {
 	return defaultGenner
@@ -32,7 +28,11 @@ type idgimpl struct {
 }
 
 func (p *idgimpl) NextId() uint64 {
-	return uint64(p.gen.NewLong())
+	value := p.gen.NewLong()
+	if value < 0 {
+		return 0
+	}
+	return uint64(value)
 }
 
 func New(wrkid uint16) IDGenerator {

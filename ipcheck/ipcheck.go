@@ -1,9 +1,15 @@
 package ipcheck
 
 import (
+	"errors"
 	"fmt"
 	"net/netip"
 	"strings"
+)
+
+var (
+	errEmptyEntry  = errors.New("ipcheck entry is empty")
+	errInvalidCIDR = errors.New("ipcheck CIDR is invalid")
 )
 
 type IChecker interface {
@@ -43,7 +49,7 @@ type Checker struct {
 func (c *Checker) Add(entry string) error {
 	trimmed := strings.TrimSpace(entry)
 	if trimmed == "" {
-		return fmt.Errorf("ipcheck: empty entry")
+		return errEmptyEntry
 	}
 
 	if strings.Contains(trimmed, "/") {
@@ -80,7 +86,7 @@ func (c *Checker) addPrefix(input string) error {
 		return fmt.Errorf("ipcheck: invalid CIDR %q: %w", input, err)
 	}
 	if !prefix.IsValid() {
-		return fmt.Errorf("ipcheck: invalid CIDR %q", input)
+		return fmt.Errorf("%w: %q", errInvalidCIDR, input)
 	}
 
 	c.prefixes = append(c.prefixes, prefix.Masked())

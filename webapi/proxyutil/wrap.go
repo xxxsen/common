@@ -2,6 +2,7 @@ package proxyutil
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
 
@@ -12,7 +13,11 @@ import (
 
 type HandleFunc func(c *gin.Context, ctx context.Context, request interface{})
 
-func innerHandle(fn HandleFunc, ptr interface{}, onDecode func(c *gin.Context, input interface{}) error) gin.HandlerFunc {
+func innerHandle(
+	fn HandleFunc,
+	ptr interface{},
+	onDecode func(c *gin.Context, input interface{}) error,
+) gin.HandlerFunc {
 	typ := reflect.TypeOf(ptr)
 	return func(c *gin.Context) {
 		val := reflect.New(typ.Elem())
@@ -25,11 +30,13 @@ func innerHandle(fn HandleFunc, ptr interface{}, onDecode func(c *gin.Context, i
 		}
 		fn(c, ctx, iface)
 	}
-
 }
 
 func WrapBizFunc(fn HandleFunc, ptr interface{}) gin.HandlerFunc {
 	return innerHandle(fn, ptr, func(c *gin.Context, input interface{}) error {
-		return c.ShouldBind(input)
+		if err := c.ShouldBind(input); err != nil {
+			return fmt.Errorf("bind request: %w", err)
+		}
+		return nil
 	})
 }

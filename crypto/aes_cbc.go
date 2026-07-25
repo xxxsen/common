@@ -14,14 +14,14 @@ type aesCBC struct {
 func (c *aesCBC) Encrypt(plaintext []byte, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create AES cipher: %w", err)
 	}
 
 	plaintext = Padding(plaintext, aes.BlockSize)
 	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
 	iv := ciphertext[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create initialization vector: %w", err)
 	}
 
 	mode := cipher.NewCBCEncrypter(block, iv)
@@ -33,18 +33,18 @@ func (c *aesCBC) Encrypt(plaintext []byte, key []byte) ([]byte, error) {
 func (c *aesCBC) Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create AES cipher: %w", err)
 	}
 
 	if len(ciphertext) < aes.BlockSize {
-		return nil, fmt.Errorf("ciphertext too short")
+		return nil, errCiphertextTooShort
 	}
 
 	iv := ciphertext[:aes.BlockSize]
 	ciphertext = ciphertext[aes.BlockSize:]
 
 	if len(ciphertext)%aes.BlockSize != 0 {
-		return nil, fmt.Errorf("ciphertext is not a multiple of the block size")
+		return nil, errInvalidBlockLength
 	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
@@ -64,8 +64,4 @@ func (c *aesCBC) Name() string {
 
 func NewAesCBC() ICodec {
 	return &aesCBC{}
-}
-
-func init() {
-	register(NewAesCBC())
 }

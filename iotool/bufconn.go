@@ -18,5 +18,5 @@ func WrapBufRConn(c net.Conn) net.Conn {
 }
 
 func (c *bufRConn) Read(b []byte) (int, error) {
-	return c.r.Read(b)
+	return wrapReadResult(c.r.Read(b))
 }

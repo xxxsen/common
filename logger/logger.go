@@ -73,7 +73,7 @@ func Init(file string, lv string, maxRotate int, maxSize int, maxKeepDays int, w
 			Filename:   file,
 			MaxSize:    sz, // megabytes
 			MaxBackups: maxRotate,
-			MaxAge:     maxKeepDays, //days
+			MaxAge:     maxKeepDays, // days
 			Compress:   false,       // disabled by default
 		}
 		synclist = append(synclist, zapcore.AddSync(logger))

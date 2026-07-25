@@ -23,28 +23,27 @@ func innerReplace(str string, searcher valueSearcherFunc) string {
 				continue
 			case '}':
 				foundRightBr = true
-				break
 			default:
 				continue
 			}
-			//左括号未找到, 以起始点i开始复制到j(包含j)的全部数据
+			// 左括号未找到, 以起始点 i 开始复制到 j (包含 j) 的全部数据。
 			if leftBr < 0 {
 				sb.WriteString(str[i : j+1])
 				break
 			}
 			key := str[leftBr+1 : j]
 			value, ok := searcher(key)
-			//左右括号均找到, 但是括号中的key在map中未找到, 此时不进行替换
+			// 左右括号均找到, 但是括号中的 key 在 map 中未找到, 此时不进行替换。
 			if !ok {
 				sb.WriteString(str[i : j+1])
 				break
 			}
-			//左右括号找到且key找到, 将内容进行替换
+			// 左右括号找到且 key 找到, 将内容进行替换。
 			sb.WriteString(str[i:leftBr])
 			sb.WriteString(asStrValue(value))
 			break
 		}
-		//当前循环直接遍历到结尾都没有找到右括号, 那么直接复制全部数据
+		// 当前循环直接遍历到结尾都没有找到右括号, 那么直接复制全部数据。
 		if !foundRightBr {
 			sb.WriteString(str[i:j])
 		}
@@ -57,26 +56,10 @@ func asStrValue(val interface{}) string {
 	switch v := val.(type) {
 	case string:
 		return v
-	case int:
-		return strconv.Itoa(v)
-	case uint:
-		return strconv.FormatUint(uint64(v), 10)
-	case uint64:
-		return strconv.FormatUint(v, 10)
-	case uint32:
-		return strconv.FormatUint(uint64(v), 10)
-	case uint16:
-		return strconv.FormatUint(uint64(v), 10)
-	case uint8:
-		return strconv.FormatUint(uint64(v), 10)
-	case int64:
-		return strconv.FormatInt(v, 10)
-	case int32:
-		return strconv.FormatInt(int64(v), 10)
-	case int16:
-		return strconv.FormatInt(int64(v), 10)
-	case int8:
-		return strconv.FormatInt(int64(v), 10)
+	case int, int8, int16, int32, int64:
+		return signedIntegerString(v)
+	case uint, uint8, uint16, uint32, uint64:
+		return unsignedIntegerString(v)
 	case float64:
 		return strconv.FormatFloat(v, 'g', -1, 64)
 	case float32:
@@ -97,6 +80,14 @@ func asStrValue(val interface{}) string {
 		res, _ := json.Marshal(v)
 		return string(res)
 	}
+}
+
+func signedIntegerString(value interface{}) string {
+	return fmt.Sprintf("%d", value)
+}
+
+func unsignedIntegerString(value interface{}) string {
+	return fmt.Sprintf("%d", value)
 }
 
 func ReplaceByMap(str string, m map[string]interface{}) string {
@@ -121,7 +112,7 @@ func ReplaceByList[T any](str string, in ...T) string {
 		if err != nil {
 			return nil, false
 		}
-		if int(index) < len(in) {
+		if index < uint64(len(in)) {
 			return in[index], true
 		}
 		return nil, false

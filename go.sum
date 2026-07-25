@@ -98,10 +98,6 @@ github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=
 github.com/rogpeppe/go-internal v1.13.1/go.mod h1:uMEvuHeurkdAXX61udpOXGD/AzZDWNMNyH2VO9fmH0o=
-github.com/smarty/assertions v1.15.1/go.mod h1:yABtdzeQs6l1brC900WlRNwj6ZR55d7B+E8C6HtKdec=
-github.com/smarty/gunit v1.5.0/go.mod h1:uAeNibUD292KZRcg5OTy7lb6WR5++UC0BQOzNuiRzpU=
-github.com/smartystreets/s3 v1.1.6 h1:0pRXDNNvFuSrnYo3tS4HzKz3pk2TQ30/zEWQIXTRi8U=
-github.com/smartystreets/s3 v1.1.6/go.mod h1:9MEbPeNBD/gGYNgou4imihN37cpC+NhHwh6Qz1Eh/mk=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
 github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
@@ -120,8 +116,6 @@ github.com/twitchyliquid64/golang-asm v0.15.1 h1:SU5vSMR7hnwNxj24w34ZyCi/FmDZTkS
 github.com/twitchyliquid64/golang-asm v0.15.1/go.mod h1:a1lVb/DtPvCB8fslRZhAngC2+aY1QWCk3Cedj/Gdt08=
 github.com/ugorji/go/codec v1.2.12 h1:9LC83zGrHhuUA9l16C9AHXAqEV/2wBQ4nkvumAE65EE=
 github.com/ugorji/go/codec v1.2.12/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
-github.com/xxxsen/s3verify v0.0.5 h1:aR8pPRl9HlWdc5dt3X9CMaCLwtArr3GyYBsOs9CxM5o=
-github.com/xxxsen/s3verify v0.0.5/go.mod h1:Qz7tlWxAoJVi+Dw9b1X//TX4yRcuKePj+FG/Xg7W5m4=
 github.com/yitter/idgenerator-go v1.3.1 h1:GjVi2BupiDb1IXaXqrkOJE4p6qKdj3NaM3GdAjWok14=
 github.com/yitter/idgenerator-go v1.3.1/go.mod h1:VVjbqFjGUsIkaXVkXEdmx1LiXUL3K1NvyxWPJBPbBpE=
 go.etcd.io/bbolt v1.4.0 h1:TU77id3TnN/zKr7CO/uk+fBCwF2jGcMuw2B/FMAzYIk=

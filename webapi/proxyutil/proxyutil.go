@@ -60,5 +60,9 @@ func GetReplyErrInfo(c *gin.Context) error {
 	if !ok {
 		return nil
 	}
-	return v.(error)
+	replyErr, valid := v.(error)
+	if !valid {
+		return nil
+	}
+	return replyErr
 }

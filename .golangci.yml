@@ -1,0 +1,186 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  go: "1.25.12"
+
+linters:
+  default: none
+
+  enable:
+    - asasalint
+    - bodyclose
+    - canonicalheader
+    - contextcheck
+    - copyloopvar
+    - dogsled
+    - dupl
+    - err113
+    - errcheck
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - forbidigo
+    - funlen
+    - gochecknoinits
+    - gocognit
+    - gocritic
+    - gocyclo
+    - gosec
+    - govet
+    - ineffassign
+    - interfacebloat
+    - lll
+    - makezero
+    - misspell
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - prealloc
+    - predeclared
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+    - wrapcheck
+
+  exclusions:
+    generated: strict
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+
+    rules:
+      - path: '(.+)_test\.go'
+        linters:
+          - dupl
+          - err113
+          - errcheck
+          - funlen
+          - gocognit
+          - gocyclo
+          - lll
+          - nestif
+          - wrapcheck
+
+  settings:
+    copyloopvar:
+      check-alias: true
+
+    dupl:
+      threshold: 120
+
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - io.Copy
+        - io.CopyBuffer
+        - io.CopyN
+        - go.uber.org/zap.(*Logger).Sync
+        - go.uber.org/zap.(*SugaredLogger).Sync
+
+    errorlint:
+      errorf: true
+      errorf-multi: true
+      asserts: true
+      comparison: true
+
+    forbidigo:
+      forbid:
+        - pattern: '^fmt\.Print.*$'
+          msg: "do not commit debug output"
+        - pattern: '^print(ln)?$'
+          msg: "do not use built-in print/println"
+
+    funlen:
+      lines: 80
+      statements: 50
+
+    gocognit:
+      min-complexity: 25
+
+    gocyclo:
+      min-complexity: 15
+
+    interfacebloat:
+      max: 5
+
+    lll:
+      line-length: 120
+      tab-width: 2
+
+    makezero:
+      always: false
+
+    misspell:
+      locale: US
+
+    nestif:
+      min-complexity: 4
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+
+    nonamedreturns:
+      report-error-in-defer: true
+
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: false
+
+    revive:
+      enable-all-rules: false
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: early-return
+        - name: empty-block
+        - name: empty-lines
+        - name: error-naming
+        - name: error-return
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+        - name: if-return
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: modifies-parameter
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: redundant-import-alias
+        - name: string-of-int
+        - name: superfluous-else
+        - name: time-equal
+        - name: time-naming
+        - name: unnecessary-if
+
+    wrapcheck:
+      ignore-sigs:
+        - .Errorf(
+        - errors.New(
+        - errors.Unwrap(
+        - errors.Join(
+      ignore-package-globs:
+        - encoding/*
+        - github.com/pkg/errors

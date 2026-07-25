@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,7 +17,12 @@ func newTestContext(t *testing.T) *gin.Context {
 	if err := engine.SetTrustedProxies(nil); err != nil {
 		t.Fatalf("set trusted proxies: %v", err)
 	}
-	ctx.Request = httptest.NewRequest(http.MethodGet, "/", nil)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/",
+		nil,
+	)
 	return ctx
 }
 

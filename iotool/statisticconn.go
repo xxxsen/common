@@ -23,7 +23,7 @@ func (s *StatisticConn) Read(b []byte) (int, error) {
 	if cnt > 0 {
 		s.rbytes += uint64(cnt)
 	}
-	return cnt, err
+	return wrapReadResult(cnt, err)
 }
 
 func (s *StatisticConn) Write(b []byte) (int, error) {
@@ -31,7 +31,7 @@ func (s *StatisticConn) Write(b []byte) (int, error) {
 	if cnt > 0 {
 		s.wbytes += uint64(cnt)
 	}
-	return cnt, err
+	return wrapWriteResult(cnt, err)
 }
 
 func (s *StatisticConn) GetRBytes() uint64 {

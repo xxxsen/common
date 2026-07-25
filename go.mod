@@ -1,6 +1,6 @@
 module github.com/xxxsen/common
 
-go 1.25.0
+go 1.25.12
 
 require (
 	github.com/aws/aws-sdk-go v1.44.96
@@ -63,7 +63,6 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/testify v1.10.0
-	github.com/xxxsen/s3verify v0.0.5
 	go.etcd.io/bbolt v1.4.0
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect

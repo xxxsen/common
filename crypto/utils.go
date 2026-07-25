@@ -14,22 +14,32 @@ func DeriveKey(in []byte) []byte {
 }
 
 func Padding(src []byte, blksize int) []byte {
+	if blksize < 1 || blksize > 255 {
+		panic(errInvalidPadding)
+	}
 	padding := blksize - len(src)%blksize
-	padText := bytes.Repeat([]byte{byte(padding)}, padding)
+	padText := bytes.Repeat([]byte{paddingByte(padding)}, padding)
 	out := make([]byte, len(padText)+len(src))
 	copy(out, src)
 	copy(out[len(src):], padText)
 	return out
 }
 
+func paddingByte(padding int) byte {
+	if padding < 0 || padding > 255 {
+		panic(errInvalidPadding)
+	}
+	return byte(padding)
+}
+
 func UnPadding(src []byte, blksize int) ([]byte, error) {
 	length := len(src)
 	if length == 0 {
-		return nil, fmt.Errorf("unpad: input data is empty")
+		return nil, errInvalidPadding
 	}
 	padding := int(src[length-1])
 	if padding > length || padding > blksize {
-		return nil, fmt.Errorf("unpad: invalid padding size")
+		return nil, errInvalidPadding
 	}
 	return src[:length-padding], nil
 }
@@ -37,8 +47,7 @@ func UnPadding(src []byte, blksize int) ([]byte, error) {
 func Nonce(sz int) ([]byte, error) {
 	nonce := make([]byte, sz)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create nonce: %w", err)
 	}
 	return nonce, nil
-
 }

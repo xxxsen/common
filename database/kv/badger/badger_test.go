@@ -43,7 +43,7 @@ func TestGetSet(t *testing.T) {
 	_, ok, err = db.Get(ctx, tab, "test_not_found")
 	assert.NoError(t, err)
 	assert.False(t, ok)
-	//bucket not found, badger db没有bucket概念, 这里只会拿到key不存在的错误, 但这个错误会被忽略
+	// Bucket not found: Badger has no bucket concept, so a missing key is ignored.
 	_, _, err = db.Get(ctx, "test", "111")
 	assert.NoError(t, err)
 }
@@ -158,7 +158,7 @@ func TestTx(t *testing.T) {
 			return err
 		}
 		if !ok {
-			return fmt.Errorf("not found in transation")
+			return fmt.Errorf("not found in transaction")
 		}
 		assert.Equal(t, []byte("bbb"), res)
 		time.Sleep(500 * time.Millisecond)
@@ -181,7 +181,7 @@ func TestExpire(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 	ctx := context.Background()
-	//badger db的ttl的最小精度为1s...
+	// Badger TTL has one-second precision.
 	err = db.Set(ctx, tab, "hello", []byte("world"), 1*time.Second)
 	assert.NoError(t, err)
 	val, ok, err := db.Get(ctx, tab, "hello")

@@ -3,7 +3,9 @@ package dbkit
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"runtime/debug"
 	"strings"
@@ -16,11 +18,20 @@ const (
 	defaultQueryLength = 50
 )
 
+var (
+	errInvalidPointer      = errors.New("invalid pointer")
+	errScanPanic           = errors.New("row scan panicked")
+	errObjectNotSettable   = errors.New("object is not settable")
+	errExpectedStructSlice = errors.New("expected a pointer to a slice of struct pointers")
+	errTooManyColumns      = errors.New("database has more columns than the destination")
+	errExpectedStructPtr   = errors.New("expected a struct pointer")
+)
+
 // ColumnMap 返回列名与顺序的映射关系
 func ColumnMap(rows *sql.Rows) (map[string]int, error) {
 	cmn, err := rows.Columns()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read columns: %w", err)
 	}
 	rs := make(map[string]int)
 	for idx, cn := range cmn {
@@ -52,13 +63,12 @@ func readSingleInstanceType(ptr interface{}) reflect.Type {
 	}
 	itemType := ref.Elem()
 	return itemType
-
 }
 
 func ensurePtrTypeSlice(ptr interface{}) error {
 	typ := reflect.TypeOf(ptr)
 	if ptr == nil || reflect.ValueOf(ptr).IsNil() || typ.Kind() != reflect.Ptr || typ.Elem().Kind() != reflect.Slice {
-		return fmt.Errorf("invalid ptr type")
+		return errInvalidPointer
 	}
 	return nil
 }
@@ -76,7 +86,11 @@ func ExtractLimitFromQuery(q map[string]interface{}) (int, bool) {
 	if sz > 2 || sz == 0 {
 		return defaultQueryLength, false
 	}
-	return int(realTyp[sz-1]), true
+	limit := realTyp[sz-1]
+	if uint64(limit) > math.MaxInt {
+		return defaultQueryLength, false
+	}
+	return int(limit), true
 }
 
 // SimpleQuery 执行一次简单的db查询, 并将数据绑定到ptr对象中
@@ -102,22 +116,37 @@ func SimpleQuery(ctx context.Context, client database.IQueryer, table string,
 	if err != nil {
 		return fmt.Errorf("do select failed, err:%w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 	return innerScan(rows, ptr, c)
 }
 
-func innerScan(rows *sql.Rows, ptr interface{}, c *scanRowConfig) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("scan panic:%v, stack:%s", e, string(debug.Stack()))
-		}
+func innerScan(rows *sql.Rows, ptr interface{}, c *scanRowConfig) error {
+	var result error
+	func() {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				result = fmt.Errorf(
+					"%w: %v, stack: %s",
+					errScanPanic,
+					recovered,
+					string(debug.Stack()),
+				)
+			}
+		}()
+		result = scanRows(rows, ptr, c)
 	}()
+	return result
+}
+
+func scanRows(rows *sql.Rows, ptr interface{}, c *scanRowConfig) error {
 	ptrObj := reflect.ValueOf(ptr)
 	if !ptrObj.Elem().CanSet() {
-		return fmt.Errorf("not settable object")
+		return errObjectNotSettable
 	}
 	if ptrObj.Elem().Kind() != reflect.Slice {
-		return fmt.Errorf("ptr should be *[]*STRUCT type")
+		return errExpectedStructSlice
 	}
 	columnMap, err := ColumnMap(rows)
 	if err != nil {
@@ -128,7 +157,12 @@ func innerScan(rows *sql.Rows, ptr interface{}, c *scanRowConfig) (err error) {
 	for rows.Next() {
 		inst, fields := newInstance(arrItemObj.Elem(), columnMap, c.tagname)
 		if len(fields) < len(columnMap) {
-			return fmt.Errorf("column count:%d in db > column count:%d in struct", len(columnMap), len(fields))
+			return fmt.Errorf(
+				"%w: database=%d destination=%d",
+				errTooManyColumns,
+				len(columnMap),
+				len(fields),
+			)
 		}
 		if err := rows.Scan(fields...); err != nil {
 			return fmt.Errorf("scan fields fail, err:%w", err)
@@ -184,7 +218,7 @@ func newInstance(ptr reflect.Type, columns map[string]int, tagname string) (inte
 
 func extractFieldNamesFromType(typ reflect.Type, tagname string) ([]string, []int, error) {
 	if typ.Kind() != reflect.Ptr || typ.Elem().Kind() != reflect.Struct {
-		return nil, nil, fmt.Errorf("ptr should STRUCT PTR type")
+		return nil, nil, errExpectedStructPtr
 	}
 	typ = typ.Elem()
 	fields := make([]string, 0, typ.NumField())

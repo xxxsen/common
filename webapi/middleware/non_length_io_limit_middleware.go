@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +15,12 @@ import (
 )
 
 const (
-	defaultMaxAllowChunkStreamLength = 5 * 1024 * 1024 //5MB
+	defaultMaxAllowChunkStreamLength = 5 * 1024 * 1024 // 5 MB
+)
+
+var (
+	errChunkedEncodingRequired = errors.New("unknown-length body must use chunked encoding")
+	errChunkStreamTooLarge     = errors.New("chunk stream exceeds the length limit")
 )
 
 func NonLengthIOLimitMiddleware() gin.HandlerFunc {
@@ -26,7 +32,7 @@ func NonLengthIOLimitMiddleware() gin.HandlerFunc {
 		ctx := c.Request.Context()
 		logutil.GetLogger(ctx).Debug("recv non-content-length io request")
 		if len(c.Request.TransferEncoding) == 0 || c.Request.TransferEncoding[0] != "chunked" {
-			proxyutil.FailStatus(c, http.StatusBadRequest, fmt.Errorf("only chunked encoding can use content-length = -1"))
+			proxyutil.FailStatus(c, http.StatusBadRequest, errChunkedEncodingRequired)
 			return
 		}
 		data, err := io.ReadAll(io.LimitReader(c.Request.Body, defaultMaxAllowChunkStreamLength+1))
@@ -36,7 +42,7 @@ func NonLengthIOLimitMiddleware() gin.HandlerFunc {
 		}
 		logutil.GetLogger(ctx).Debug("read chunk stream from client", zap.Int("length", len(data)))
 		if len(data) > defaultMaxAllowChunkStreamLength {
-			proxyutil.FailStatus(c, http.StatusBadRequest, fmt.Errorf("chunk stream exceed length limit"))
+			proxyutil.FailStatus(c, http.StatusBadRequest, errChunkStreamTooLarge)
 			return
 		}
 		r := bytes.NewReader(data)
@@ -55,10 +61,20 @@ type readCloserWrap struct {
 	c io.Closer
 }
 
-func (c *readCloserWrap) Read(p []byte) (n int, err error) {
-	return c.r.Read(p)
+func (c *readCloserWrap) Read(p []byte) (int, error) {
+	count, err := c.r.Read(p)
+	if err == nil {
+		return count, nil
+	}
+	if errors.Is(err, io.EOF) {
+		return count, io.EOF
+	}
+	return count, fmt.Errorf("read buffered request: %w", err)
 }
 
 func (c *readCloserWrap) Close() error {
-	return c.c.Close()
+	if err := c.c.Close(); err != nil {
+		return fmt.Errorf("close request body: %w", err)
+	}
+	return nil
 }

@@ -12,12 +12,12 @@ type aesGCM struct {
 func (c *aesGCM) Encrypt(buf []byte, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create AES cipher: %w", err)
 	}
 
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create AES-GCM: %w", err)
 	}
 	nonce, err := Nonce(aesGCM.NonceSize())
 	if err != nil {
@@ -31,20 +31,20 @@ func (c *aesGCM) Encrypt(buf []byte, key []byte) ([]byte, error) {
 func (c *aesGCM) Decrypt(buf []byte, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create AES cipher: %w", err)
 	}
 
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create AES-GCM: %w", err)
 	}
 	if len(buf) < aesGCM.NonceSize() {
-		return nil, fmt.Errorf("ciphertext too short")
+		return nil, errCiphertextTooShort
 	}
 	nonce, buf := buf[:aesGCM.NonceSize()], buf[aesGCM.NonceSize():]
 	plaintext, err := aesGCM.Open(nil, nonce, buf, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decrypt AES-GCM: %w", err)
 	}
 
 	return plaintext, nil
@@ -56,8 +56,4 @@ func (c *aesGCM) Name() string {
 
 func NewAesGCM() ICodec {
 	return &aesGCM{}
-}
-
-func init() {
-	register(NewAesGCM())
 }

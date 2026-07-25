@@ -2,6 +2,7 @@ package iotool
 
 import (
 	"context"
+	"errors"
 	"io"
 	"sync"
 
@@ -15,15 +16,19 @@ const (
 
 var bufPool = sync.Pool{
 	New: func() interface{} {
-		return make([]byte, defaultBufSize)
+		buffer := make([]byte, defaultBufSize)
+		return &buffer
 	},
 }
 
 func transfer(w io.Writer, r io.Reader, errs chan<- error) {
-	buf := bufPool.Get().([]byte)
-	defer bufPool.Put(buf)
-	_, err := io.CopyBuffer(w, r, buf)
-	if err == io.EOF {
+	buffer, ok := bufPool.Get().(*[]byte)
+	if !ok {
+		panic("iotool: invalid buffer pool value")
+	}
+	defer bufPool.Put(buffer)
+	_, err := io.CopyBuffer(w, r, *buffer)
+	if errors.Is(err, io.EOF) {
 		err = nil
 	}
 	errs <- err

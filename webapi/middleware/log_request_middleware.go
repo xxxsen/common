@@ -12,7 +12,7 @@ import (
 )
 
 func readClientIP(c *gin.Context) string {
-	//自己的工程都是都是内网访问, 直接从x-real-ip拿吧, 不折腾...
+	// 自有服务均从内网接入，因此优先使用 X-Real-IP。
 	ip := net.ParseIP(c.RemoteIP())
 	if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
 		if rip := c.GetHeader("X-Real-IP"); len(rip) > 0 {

@@ -3,7 +3,7 @@ package sqlite
 import (
 	"context"
 	"fmt"
-	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/didi/gendry/builder"
@@ -12,43 +12,24 @@ import (
 	"github.com/xxxsen/common/database/dbkit"
 )
 
-const (
-	sqliteFile = "/tmp/sqlite_test.db"
-	table      = "test_tab"
-)
+const table = "test_tab"
 
-var (
-	db database.IDatabase
-)
-
-func setup() {
-	var err error
-	ctx := context.Background()
-	db, err = New(sqliteFile, func(db database.IDatabase) error {
+func newTestDatabase(t *testing.T) database.IDatabase {
+	t.Helper()
+	ctx := t.Context()
+	db, err := New(filepath.Join(t.TempDir(), "sqlite.db"), func(db database.IDatabase) error {
 		if _, err := db.ExecContext(ctx, "create table test_tab(name text, age integer);"); err != nil {
 			return err
 		}
 		return nil
 	})
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-}
-
-func tearDown() {
-	if db != nil {
+	t.Cleanup(func() {
 		_ = db.Close()
-	}
-	_ = os.RemoveAll(sqliteFile)
-}
-
-func TestMain(m *testing.M) {
-	setup()
-	code := m.Run()
-	tearDown()
-	if code != 0 {
-		os.Exit(code)
-	}
+	})
+	return db
 }
 
 type testSt struct {
@@ -57,6 +38,7 @@ type testSt struct {
 }
 
 func TestReadWrite(t *testing.T) {
+	db := newTestDatabase(t)
 	data := []map[string]interface{}{
 		{
 			"name": "hello",
@@ -88,6 +70,7 @@ func TestReadWrite(t *testing.T) {
 }
 
 func TestTxNoCommit(t *testing.T) {
+	db := newTestDatabase(t)
 	ctx := context.Background()
 	err := db.OnTransation(ctx, func(ctx context.Context, qe database.IQueryExecer) error {
 		data := []map[string]interface{}{
@@ -118,6 +101,7 @@ func TestTxNoCommit(t *testing.T) {
 }
 
 func TestTxCommit(t *testing.T) {
+	db := newTestDatabase(t)
 	ctx := context.Background()
 	err := db.OnTransation(ctx, func(ctx context.Context, qe database.IQueryExecer) error {
 		data := []map[string]interface{}{

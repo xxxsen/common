@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -9,8 +10,13 @@ import (
 )
 
 func TestBasicAuth(t *testing.T) {
-	at := &basicAuth{}
-	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/test", nil)
+	at := NewBasic()
+	r, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"http://127.0.0.1/test",
+		nil,
+	)
 	assert.NoError(t, err)
 	ak := "abc"
 	sk := "123456"

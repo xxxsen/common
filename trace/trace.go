@@ -30,13 +30,14 @@ func WithTraceId(ctx context.Context, traceid string) context.Context {
 }
 
 func GetTraceId(ctx context.Context) (string, bool) {
-	if v := ctx.Value(keyTraceId); v != nil {
-		return v.(string), true
+	if value, ok := ctx.Value(keyTraceId).(string); ok {
+		return value, true
 	}
 	getter, ok := ctx.(IKvGetter)
 	if ok {
-		if v, exist := getter.Get(keyStrTraceId); exist {
-			return v.(string), true
+		if value, exist := getter.Get(keyStrTraceId); exist {
+			traceID, valid := value.(string)
+			return traceID, valid
 		}
 	}
 	return "", false

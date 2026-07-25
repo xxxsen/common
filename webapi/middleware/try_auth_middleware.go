@@ -9,8 +9,12 @@ import (
 	"go.uber.org/zap"
 )
 
-func TryAuthMiddleware(fn auth.UserQueryFunc) gin.HandlerFunc {
-	return tryAuthMiddleware(fn, auth.AuthList()...)
+func TryAuthMiddleware(fn auth.UserQueryFunc, authenticators ...auth.IAuth) gin.HandlerFunc {
+	if len(authenticators) == 0 {
+		authenticators = []auth.IAuth{auth.NewBasic()}
+	}
+	isolated := append([]auth.IAuth(nil), authenticators...)
+	return tryAuthMiddleware(fn, isolated...)
 }
 
 func tryAuthMiddleware(matchfn auth.UserQueryFunc, ats ...auth.IAuth) gin.HandlerFunc {
@@ -19,18 +23,24 @@ func tryAuthMiddleware(matchfn auth.UserQueryFunc, ats ...auth.IAuth) gin.Handle
 		logger := logutil.GetLogger(ctx).With(zap.String("method", c.Request.Method),
 			zap.String("path", c.Request.URL.Path), zap.String("ip", c.ClientIP()))
 
-		for _, fn := range ats {
-			ak, err := fn.Auth(c, matchfn)
+		for _, authenticator := range ats {
+			if authenticator == nil {
+				continue
+			}
+			ak, err := authenticator.Auth(c, matchfn)
 			if err != nil {
 				continue
 			}
-			logger.Debug("user auth succ", zap.String("auth", fn.Name()), zap.String("ak", ak))
-			ctx := c.Request.Context()
-			ctx = proxyutil.SetUserInfo(ctx, &proxyutil.UserInfo{
-				AuthType: fn.Name(),
+			logger.Debug(
+				"user auth succ",
+				zap.String("auth", authenticator.Name()),
+				zap.String("ak", ak),
+			)
+			authContext := proxyutil.SetUserInfo(c.Request.Context(), &proxyutil.UserInfo{
+				AuthType: authenticator.Name(),
 				Username: ak,
 			})
-			c.Request = c.Request.WithContext(ctx)
+			c.Request = c.Request.WithContext(authContext)
 			return
 		}
 	}

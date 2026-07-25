@@ -2,17 +2,29 @@ package utils
 
 import (
 	"crypto/rand"
-	unsaferand "math/rand"
+	"math/big"
 )
-
-//import
 
 func RandBytes(l, r int) []byte {
 	if l > r {
 		l = r
 	}
-	length := unsaferand.Intn(r-l+1) + l
+	length := secureRandomInt(l, r)
 	buf := make([]byte, length)
-	_, _ = rand.Reader.Read(buf)
-	return buf 
+	if _, err := rand.Read(buf); err != nil {
+		panic(err)
+	}
+	return buf
+}
+
+func secureRandomInt(minimum, maximum int) int {
+	if minimum == maximum {
+		return minimum
+	}
+	span := big.NewInt(int64(maximum - minimum + 1))
+	offset, err := rand.Int(rand.Reader, span)
+	if err != nil {
+		panic(err)
+	}
+	return minimum + int(offset.Int64())
 }

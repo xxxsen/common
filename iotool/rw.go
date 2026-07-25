@@ -9,15 +9,15 @@ type ioWrapper struct {
 }
 
 func (w *ioWrapper) Read(b []byte) (int, error) {
-	return w.r.Read(b)
+	return wrapReadResult(w.r.Read(b))
 }
 
 func (w *ioWrapper) Write(b []byte) (int, error) {
-	return w.w.Write(b)
+	return wrapWriteResult(w.w.Write(b))
 }
 
 func (w *ioWrapper) Close() error {
-	return w.c.Close()
+	return wrapCloseError(w.c.Close())
 }
 
 func WrapReadWriter(r io.Reader, w io.Writer) io.ReadWriter {

@@ -2,6 +2,8 @@ package cmder
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"os/exec"
 	"syscall"
@@ -14,6 +16,8 @@ type Cmder struct {
 	out     io.Writer
 	err     io.Writer
 }
+
+var errNilContext = errors.New("cmder: context is nil")
 
 // Deprecated: use Cmder
 type CMDer = Cmder
@@ -40,7 +44,7 @@ func (c *Cmder) SetOutput(out io.Writer, err io.Writer) *Cmder {
 
 func (c *Cmder) Run(ctx context.Context, name string, args ...string) error {
 	if ctx == nil {
-		ctx = context.Background()
+		return errNilContext
 	}
 	cmd := exec.CommandContext(ctx, name, args...)
 	if len(c.workdir) != 0 {
@@ -50,14 +54,14 @@ func (c *Cmder) Run(ctx context.Context, name string, args ...string) error {
 	cmd.Stderr = c.err
 
 	if c.uid != nil && c.gid != nil {
-		//need root
+		// Need root.
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: *c.uid, Gid: *c.gid}
 	}
 
 	err := cmd.Run()
 	if err != nil {
-		return err
+		return fmt.Errorf("run command: %w", err)
 	}
 	return nil
 }
